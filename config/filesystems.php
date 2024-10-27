@@ -45,6 +45,14 @@ return [
             'throw' => false,
         ],
 
+        'localUpload' => [ // New location of saan mauupload files
+        'driver' => 'local',
+        'root' => public_path('documents'), 
+        'url' => env('APP_URL').'/documents',
+        'visibility' => 'public',
+        'throw' => false,
+    ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
