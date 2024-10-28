@@ -28,12 +28,9 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->colors([
-                'primary' => '#c40002',
-            ])            
-            ->font('Montserrat')
-            ->brandLogo(asset('images/logo.png')) //Location of logo (Nasa public folder)
-            ->brandLogoHeight('4rem') // Change size
-
+               'primary' => '#A60606',
+            ])         
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([
