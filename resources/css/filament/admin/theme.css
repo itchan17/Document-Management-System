@@ -3,19 +3,22 @@
 @config 'tailwind.config.js';
 
 @layer components {
+    /* Put shadow in the sidebar */
     .fi-sidebar-nav {
-        @apply shadow-[0_21px_30px_-5px_rgba(0,0,0,0.1),_0_10px_10px_-5px_rgba(0,0,0,0.04)];
+        @apply shadow-[0_10px_15px_5px_rgba(0,0,0,0.1),_0_10px_10px_-5px_rgba(0,0,0,0.04)];
     }
 
-    .fi-topbar nav {
-        @apply bg-customRed;
-    }
-
+    /* Change the size of logo and height of it's container */
     .fi-sidebar-header div {
         @apply h-full w-full font-sans;
     }
 
     .fi-sidebar-header img {
         @apply h-14;
+    }
+
+    /* Change the size of avatar */
+    .fi-topbar img {
+        @apply h-12 w-12;
     }
 }

@@ -12,7 +12,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {
-            $table->string('file_type')->after('file_path'); // Limutan lagyan
+            $table->string('file_type')->after('file_path'); 
+            $table->string('file_date')->after('file_type'); 
+            $table->text('description')->after('file_date')->nullable(); 
+            $table->text('file_content')->after('description'); 
         });
     }
 

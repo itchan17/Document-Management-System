@@ -14,7 +14,6 @@ return new class extends Migration
         Schema::create('documents', function (Blueprint $table) {
             $table->id();
             $table->string('title');
-            $table->text('file_content')->nullable();
             $table->string('file_path');
             $table->foreignId('user_id')->constrained()->onDelete('cascade'); 
             $table->timestamps();

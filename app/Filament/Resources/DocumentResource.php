@@ -55,52 +55,6 @@ class DocumentResource extends Resource
         ]);
     }
 
-    public static function table(Table $table): Table
-    {
-        return $table
-            ->columns([
-                TextColumn::make('title')
-                ->searchable(),
-
-                TextColumn::make('file_type')
-                ->label('File Type')
-                ->searchable(),
-                
-                TextColumn::make('user.name') 
-                ->label('Uploaded By'),
-
-                TextColumn::make('created_at')
-                ->label('Created At')
-                ->date(),
-
-                TextColumn::make('updated_at')
-                ->label('Updated At')
-                ->date(),
-
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                Action::make('viewFile')
-                ->label('View File')
-                ->icon('heroicon-o-eye') 
-                ->url(fn (Document $record): string => route('documents.view', $record->id)) // Create a URL to the view action
-                ->openUrlInNewTab(),
-
-
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                ]),
-            ]);
-    }
-
-
-
-
     public static function getRelations(): array
     {
         return [
