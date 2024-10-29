@@ -16,6 +16,10 @@ use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\DatePicker;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
+use Smalot\PdfParser\Parser;
+use Illuminate\Validation\Rule; 
+use Closure;
+
 
 class CreateDocument extends Page implements HasForms
 {
@@ -39,47 +43,81 @@ class CreateDocument extends Page implements HasForms
     }
 
     public function form(Form $form): Form
-{
-    return $form
-        ->schema([
-            Grid::make(2)
-                ->schema([
-                    TextInput::make('title')
-                        ->label('Title')
-                        ->required()
-                        ->maxLength(255),
-                    DatePicker::make('file_date')
-                        ->required(),
-                    Select::make('file_type')
-                        ->label('File Type')
-                        ->options([
-                            'contracts' => 'Contracts',
-                            'agreements' => 'Agreements',
-                        ])
-                        ->required(), 
-                    TextInput::make('description')
-                        ->label('Description')
-                        ->maxLength(255),
-                    FileUpload::make('file_path')
-                        ->disk('localUpload')
-                        ->label('Upload File')
-                        ->acceptedFileTypes(['application/pdf']),       
-                ])
-        ])
-        ->statePath('data');
-}
+    {
+        return $form
+            ->schema([
+                Grid::make(2)
+                    ->schema([
+                        TextInput::make('title')
+                            ->label('Title')
+                            ->required()
+                            ->maxLength(255)
+                            ->unique(table: Document::class)
+                                ->validationMessages([
+                                    'unique' => 'The :attribute already exists.',
+                                ]),
+                        DatePicker::make('file_date')
+                            ->required(),
+                        Select::make('file_type')
+                            ->label('File Type')
+                            ->options([
+                                'contracts' => 'Contracts',
+                                'agreements' => 'Agreements',
+                            ])
+                            ->required(), 
+                        TextInput::make('description')
+                            ->label('Description')
+                            ->maxLength(255),
+                        FileUpload::make('file_path')
+                            ->label('Upload File')
+                            ->required()
+                            ->disk('public')
+                            ->directory('documents')
+                            ->storeFileNamesIn('attachment_file_names')
+                            ->rules([
+                                function () {
+                                    return function (string $attribute, $value, Closure $fail) {
+                                        if ($value) {
+                                            // Get the original file name
+                                            $fileName = $value->getClientOriginalName(); 
 
+                                            // Check if the file/file_name already exists
+                                            $exists = Document::where('file_name', $fileName)->exists();
+                                            
+                                            // If exists throw message saying the file already exists
+                                            if ($exists) {                                            
+                                                $fail("The file '{$fileName}' already exists.");
+                                            }
+                                        }
+                                    };
+                                },
+                            ]),       
+                        ])
+            ])
+            ->statePath('data');
+    }
 
     public function create(): void
     {
         $data = $this->form->getState();
 
+        $parser = new Parser();
+
+        $filePath = $data['file_path'];   
+        
+        $fileContents = $parser->parseFile(storage_path('app/public/' . $filePath))->getText();  // Extract the text
+ 
+        $data['file_content'] = $fileContents; // Insert the content in the $data array
+
         // Save the data to the database
         Document::create([
             'title' => $data['title'],
+            'file_name' => $data['attachment_file_names'], 
             'file_type' => $data['file_type'],
             'file_date' => $data['file_date'],
             'file_path' => $data['file_path'], 
+            'description' => $data['description'], 
+            'file_content' => $data['file_content'], 
             'user_id' => auth()->id(),
         ]);
 
@@ -91,6 +129,7 @@ class CreateDocument extends Page implements HasForms
         $this->form->fill();
     }
 
+    // Function for the clear button
     public function clear(): void
     {
         $this->form->fill();

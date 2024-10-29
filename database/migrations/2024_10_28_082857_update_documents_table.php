@@ -12,6 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {
+            $table->string('file_name')->after('title'); 
             $table->string('file_type')->after('file_path'); 
             $table->string('file_date')->after('file_type'); 
             $table->text('description')->after('file_date')->nullable(); 
