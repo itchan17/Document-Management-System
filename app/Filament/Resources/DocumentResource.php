@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\DocumentResource\Pages;
 use App\Filament\Resources\DocumentResource\RelationManagers;
+use App\Filament\Resources\DocumentResource\Pages\ListDocumentActivities;
 use App\Models\Document;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -115,6 +116,7 @@ class DocumentResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->recordUrl(null) 
             ->columns([
                 TextColumn::make('title')
                     ->wrap(),
@@ -125,6 +127,12 @@ class DocumentResource extends Resource
                     ->width('250px'),
             ])->searchable()
             ->actions([
+                Action::make('viewFile') //view function
+                ->label('View File')
+                ->icon('heroicon-o-eye') 
+                ->url(fn (Document $record): string => route('documents.view', $record->id)) // Create a URL to the view action
+                ->openUrlInNewTab(),
+
                 Tables\Actions\EditAction::make(),               
                 Tables\Actions\DeleteAction::make()
                     ->after(function (Document $record) {

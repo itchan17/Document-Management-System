@@ -47,7 +47,7 @@ return [
 
         'localUpload' => [ // New location of saan mauupload files
         'driver' => 'local',
-        'root' => public_path('documents'), 
+        'root' => storage_path('app/public/documents'), 
         'url' => env('APP_URL').'/documents',
         'visibility' => 'public',
         'throw' => false,

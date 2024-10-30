@@ -13,9 +13,9 @@ class DocumentController extends Controller
         $document = Document::findOrFail($id);
         
         // Check if the file exists in the specified disk
-        if (Storage::disk('localUpload')->exists($document->file_path)) {
+        if (Storage::disk('public')->exists($document->file_path)) {
             // Return the file response for viewing
-            return response()->file(Storage::disk('localUpload')->path($document->file_path));
+            return response()->file(Storage::disk('public')->path($document->file_path));
         } else {
             return redirect()->back()->with('error', 'File not found.');
         }
