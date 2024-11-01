@@ -18,6 +18,7 @@ class Document extends Model
     {
         return [
             'id' => $this->id,
+            'title' => $this->title,
             'file_name' => $this->file_name,
             'file_date' => $this->file_date,
             'file_content' => $this->file_content,
