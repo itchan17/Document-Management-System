@@ -7,8 +7,11 @@
     "require": {
         "php": "^8.2",
         "filament/filament": "^3.2",
+        "http-interop/http-factory-guzzle": "^1.2",
         "laravel/framework": "^11.9",
+        "laravel/scout": "^10.11",
         "laravel/tinker": "^2.9",
+        "meilisearch/meilisearch-php": "^1.11",
         "smalot/pdfparser": "^2.11"
     },
     "require-dev": {

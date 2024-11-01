@@ -116,8 +116,7 @@ class DocumentResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('title')
-                    ->wrap(),
+                TextColumn::make('title'),
                 TextColumn::make('file_type'),
                 TextColumn::make('file_date'),
                 TextColumn::make('description')
