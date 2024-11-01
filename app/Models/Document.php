@@ -6,11 +6,26 @@ use Illuminate\Database\Eloquent\Model;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Laravel\Scout\Searchable;
 
 class Document extends Model
 {
+    use Searchable;
     use SoftDeletes;
     use LogsActivity;
+
+    public function toSearchableArray()
+    {
+        return [
+            'id' => $this->id,
+            'file_name' => $this->file_name,
+            'file_date' => $this->file_date,
+            'file_content' => $this->file_content,
+            'description' => $this->description,
+            'user_id' => $this->user_id,
+            'created_at' => $this->created_at,     
+        ];
+    }
 
     protected $fillable = [ 'title', 
                             'file_name',
