@@ -87,7 +87,7 @@ class DocumentResource extends Resource
                             ->required()
                             ->disk('public')
                             ->directory('documents')
-                            ->storeFileNamesIn('attachment_file_names')
+                            ->storeFileNamesIn('file_name')
                             ->rules([
                                 function (Document $record) {
                                     return function (string $attribute, $value, Closure $fail) use ($record) {

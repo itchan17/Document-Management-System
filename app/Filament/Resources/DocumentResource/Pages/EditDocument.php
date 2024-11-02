@@ -15,13 +15,13 @@ class EditDocument extends EditRecord
     protected function mutateFormDataBeforeSave(array $data): array
     {        
         $parser = new Parser();
-
+        
         $filePath = $data['file_path'];   
  
         $fileContents = $parser->parseFile(storage_path('app/public/' . $filePath))->getText(); // Extract the text
     
         $data['file_content'] = $fileContents; // Insert the content in the $data array
-  
+
         return $data;  // Return the data to be save in database
     }
 }

@@ -73,7 +73,7 @@ class CreateDocument extends Page implements HasForms
                             ->required()
                             ->disk('public')
                             ->directory('documents')
-                            ->storeFileNamesIn('attachment_file_names')
+                            ->storeFileNamesIn('file_name')
                             ->rules([
                                 function () {
                                     return function (string $attribute, $value, Closure $fail) {
@@ -112,7 +112,7 @@ class CreateDocument extends Page implements HasForms
         // Save the data to the database
         Document::create([
             'title' => $data['title'],
-            'file_name' => $data['attachment_file_names'], 
+            'file_name' => $data['file_name'], 
             'file_type' => $data['file_type'],
             'file_date' => $data['file_date'],
             'file_path' => $data['file_path'], 

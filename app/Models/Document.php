@@ -55,6 +55,13 @@ class Document extends Model
             ->logOnly(['title', 'file_name', 'file_path', 'file_date', 'file_type',  'description' ]) // Showing the Activities
             ->logOnlyDirty(); // Show only the changed attributes (EDIT)
     }
+
+    // To access user's name in the Users table using the user_id foreign key
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
     
 
 

@@ -6,7 +6,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Tables\Columns\TextColumn;
-use App\Models\User;
+use App\Models\ActivityLog;
 
 class RecentActivities extends BaseWidget
 {
@@ -17,13 +17,22 @@ class RecentActivities extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->paginated(false)
-            ->query(User::query())
+            ->query(ActivityLog::query()->latest()->limit(5))
             ->columns([
-                TextColumn::make('Activity'),
-                TextColumn::make('Date'),
-                TextColumn::make('name')
+                TextColumn::make('event')
+                    ->label('Activity')
+                    ->formatStateUsing(fn ($state) => ucwords($state)),
+
+                TextColumn::make('document.title')
+                ->label('Document'),
+
+                TextColumn::make('created_at')
+                    ->label('Date and Time')
+                    ->dateTime('F j, Y, g:i a'),
+    
+                TextColumn::make('user.name')
                     ->label('User'),
-            ]);
+            ])
+            ->paginated(false); 
     }
 }
