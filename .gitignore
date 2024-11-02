@@ -21,4 +21,6 @@ yarn-error.log
 /.vscode
 /.zed
 data.ms/
+meilisearch.exe
+
 
