@@ -25,12 +25,13 @@ use Smalot\PdfParser\Parser;
 use Illuminate\Validation\Rule; 
 use Closure;
 use Illuminate\Support\Facades\Storage;
+use Filament\Forms\Components\Section;
 
 class DocumentResource extends Resource
 {
     protected static ?string $model = Document::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-s-rectangle-stack';
 
     protected static ?string $navigationLabel = 'Manage Documents';
 
@@ -42,75 +43,86 @@ class DocumentResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
+        ->schema([
+            Section::make('Document Details')
+            ->columns([
+                'sm' => 1,
+                'md' => 3,                 
+            ])
             ->schema([
-                Grid::make(2)
-                    ->schema([
-                        TextInput::make('title')
-                            ->label('Title')
-                            ->required()
-                            ->maxLength(255)
-                            ->rules([
-                                function (Document $record) {
+                TextInput::make('title')
+                        ->label('Title')
+                        ->required()
+                        ->maxLength(255)
+                        ->rules([
+                            function (Document $record) {
 
-                                    return function (string $attribute, $value, Closure $fail) use ($record) {
+                                return function (string $attribute, $value, Closure $fail) use ($record) {
 
-                                       // Check if the new value and previous value is same
-                                       $prevValue = $record->title == $value ? true : false;
-   
-                                        if ($value) {                                          
+                                   // Check if the new value and previous value is same
+                                   $prevValue = $record->title == $value ? true : false;
 
-                                            // Check if the file/file_name already exists
-                                            $exists = Document::where('title', $value)->exists();
+                                    if ($value) {                                          
 
-                                            // If exists throw message saying the file already exists
-                                            if ($exists && !$prevValue) {                                            
-                                                $fail("The title already exists.");
-                                            }
+                                        // Check if the file/file_name already exists
+                                        $exists = Document::where('title', $value)->exists();
+
+                                        // If exists throw message saying the file already exists
+                                        if ($exists && !$prevValue) {                                            
+                                            $fail("The title already exists.");
                                         }
-                                    };
-                                },
-                            ]),
-                        DatePicker::make('file_date')
-                            ->required(),
-                        Select::make('file_type')
-                            ->label('File Type')
-                            ->options([
-                                'contracts' => 'Contracts',
-                                'agreements' => 'Agreements',
-                            ])
-                            ->required(), 
-                        TextInput::make('description')
-                            ->label('Description')
-                            ->maxLength(255),
-                        FileUpload::make('file_path')
-                            ->label('Upload File')
-                            ->required()
-                            ->disk('public')
-                            ->directory('documents')
-                            ->storeFileNamesIn('file_name')
-                            ->rules([
-                                function (Document $record) {
-                                    return function (string $attribute, $value, Closure $fail) use ($record) {
-                                        $fileName = $value->getClientOriginalName(); 
+                                    }
+                                };
+                            },
+                        ]),
+                DatePicker::make('file_date')
+                    ->label('File Date')
+                    ->required(),
+                Select::make('file_type')
+                    ->label('File Type')
+                    ->options([
+                        'contracts' => 'Contracts',
+                        'agreements' => 'Agreements',
+                    ])
+                    ->required(), 
+                TextArea::make('description')
+                    ->label('Description')
+                    ->maxLength(255)
+                    ->columnSpan('full')
+                    ->rows(3),
+                           
+            ])->columnSpan('full'),
+            Section::make('Upload FIle')
+            ->schema([
+                FileUpload::make('file_path')
+                        ->label('File')
+                        ->required()
+                        ->disk('public')
+                        ->directory('documents')
+                        ->storeFileNamesIn('file_name')
+                        ->rules([
+                            function (Document $record) {
+                                return function (string $attribute, $value, Closure $fail) use ($record) {
+                                    $fileName = $value->getClientOriginalName(); 
 
-                                        // Check if the new value and previous value is same
-                                        $prevValue = $record->file_name == $fileName ? true : false;
+                                    // Check if the new value and previous value is same
+                                    $prevValue = $record->file_name == $fileName ? true : false;
 
-                                        if ($value) {
-                                            
-                                            // Check if the file/file_name already exists
-                                            $exists = Document::where('file_name', $fileName)->exists();
+                                    if ($value) {
+                                        
+                                        // Check if the file/file_name already exists
+                                        $exists = Document::where('file_name', $fileName)->exists();
 
-                                            // If exists throw message saying the file already exists
-                                            if ($exists && !$prevValue) {                                            
-                                                $fail("The file '{$fileName}' already exists.");
-                                            }
+                                        // If exists throw message saying the file already exists
+                                        if ($exists && !$prevValue) {                                            
+                                            $fail("The file '{$fileName}' already exists.");
                                         }
-                                    };
-                                },
-                            ]),       
-                        ])
-                    ]);
+                                    }
+                                };
+                            },
+                        ]), 
+            ])->columnSpan('full')
+        ])->statePath('data');
     }
  
     public static function table(Table $table): Table
@@ -119,12 +131,15 @@ class DocumentResource extends Resource
             ->recordUrl(null) 
             ->columns([
                 TextColumn::make('title'),
+                TextColumn::make('file_name'),
                 TextColumn::make('file_type'),
                 TextColumn::make('file_date'),
                 TextColumn::make('description')
                     ->wrap()
                     ->width('250px'),
-            ])->searchable()
+            ])
+            ->searchable()
+            ->defaultSort('created_at', 'desc')
             ->actions([
                 Action::make('viewFile') //view function
                 ->label('View File')

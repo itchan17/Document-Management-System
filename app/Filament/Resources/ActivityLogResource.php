@@ -29,6 +29,8 @@ class ActivityLogResource extends Resource
 
     protected static ?int $navigationSort = 4;
 
+    protected static ?string $navigationGroup = 'Admin Tools';
+
 
 
     public static function form(Form $form): Form

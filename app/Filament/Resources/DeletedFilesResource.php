@@ -22,9 +22,14 @@ class DeletedFilesResource extends Resource
     protected static ?string $model = Document::class;
 
     protected static ?string $navigationIcon = 'heroicon-c-trash';
+
     protected static ?int $navigationSort = 5;
+
     protected static ?string $navigationLabel = 'Deleted Files';
+
     protected static ?string $pluralLabel = 'Deleted Files';
+
+    protected static ?string $navigationGroup = 'Admin Tools';
 
     public static function form(Form $form): Form
     {

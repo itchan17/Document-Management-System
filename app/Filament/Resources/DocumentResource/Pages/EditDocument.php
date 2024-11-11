@@ -24,4 +24,9 @@ class EditDocument extends EditRecord
 
         return $data;  // Return the data to be save in database
     }
+
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }

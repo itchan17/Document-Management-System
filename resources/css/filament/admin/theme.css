@@ -21,4 +21,8 @@
     .fi-topbar img {
         @apply h-12 w-12;
     }
+
+    .fi-simple-header div img {
+        @apply h-28;
+    }
 }

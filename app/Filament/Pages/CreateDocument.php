@@ -19,13 +19,15 @@ use Filament\Notifications\Notification;
 use Smalot\PdfParser\Parser;
 use Illuminate\Validation\Rule; 
 use Closure;
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\RichEditor;
 
 
 class CreateDocument extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-document-text';
+    protected static ?string $navigationIcon = 'heroicon-s-document-text';
 
     protected static string $view = 'filament.pages.create-document';
 
@@ -46,9 +48,13 @@ class CreateDocument extends Page implements HasForms
     {
         return $form
             ->schema([
-                Grid::make(2)
-                    ->schema([
-                        TextInput::make('title')
+                Section::make('Document Details')
+                ->columns([
+                    'sm' => 1,
+                    'md' => 3,                 
+                ])
+                ->schema([
+                    TextInput::make('title')
                             ->label('Title')
                             ->required()
                             ->maxLength(255)
@@ -56,20 +62,27 @@ class CreateDocument extends Page implements HasForms
                                 ->validationMessages([
                                     'unique' => 'The :attribute already exists.',
                                 ]),
-                        DatePicker::make('file_date')
-                            ->required(),
-                        Select::make('file_type')
-                            ->label('File Type')
-                            ->options([
-                                'contracts' => 'Contracts',
-                                'agreements' => 'Agreements',
-                            ])
-                            ->required(), 
-                        TextInput::make('description')
-                            ->label('Description')
-                            ->maxLength(255),
-                        FileUpload::make('file_path')
-                            ->label('Upload File')
+                    DatePicker::make('file_date')
+                        ->label('File Date')
+                        ->required(),
+                    Select::make('file_type')
+                        ->label('File Type')
+                        ->options([
+                            'contracts' => 'Contracts',
+                            'agreements' => 'Agreements',
+                        ])
+                        ->required(), 
+                    TextArea::make('description')
+                        ->label('Description')
+                        ->maxLength(255)
+                        ->columnSpan('full')
+                        ->rows(3),
+                               
+                ])->columnSpan('full'),
+                Section::make('Upload FIle')
+                ->schema([
+                    FileUpload::make('file_path')
+                            ->label('File')
                             ->required()
                             ->disk('public')
                             ->directory('documents')
@@ -91,10 +104,9 @@ class CreateDocument extends Page implements HasForms
                                         }
                                     };
                                 },
-                            ]),       
-                        ])
-            ])
-            ->statePath('data');
+                            ]),
+                ])->columnSpan('full')
+            ])->statePath('data');
     }
 
     public function create(): void
