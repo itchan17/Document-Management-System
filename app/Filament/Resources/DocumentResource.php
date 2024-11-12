@@ -26,6 +26,14 @@ use Illuminate\Validation\Rule;
 use Closure;
 use Illuminate\Support\Facades\Storage;
 use Filament\Forms\Components\Section;
+use Filament\Tables\Columns\Layout\Stack;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Panel;
+use Filament\Support\Enums\FontWeight;
+use Filament\Tables\Columns\Layout\View;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Enums\ActionsPosition;
 
 class DocumentResource extends Resource
 {
@@ -129,25 +137,35 @@ class DocumentResource extends Resource
     {
         return $table
             ->recordUrl(null) 
+            
             ->columns([
-                TextColumn::make('title'),
-                TextColumn::make('file_name'),
-                TextColumn::make('file_type'),
-                TextColumn::make('file_date'),
-                TextColumn::make('description')
-                    ->wrap()
-                    ->width('250px'),
+                Stack::make([                  
+                    TextColumn::make('file_name')
+                        ->icon('heroicon-s-document-text')
+                        ->iconColor('primary'),
+                    TextColumn::make('title')
+                        ->weight(FontWeight::Medium)
+                        ->size(TextColumn\TextColumnSize::Medium),       
+                ]),
+                View::make('documents.table.collapsible-row-content')
+                    ->collapsible(),     
+            ])
+            ->contentGrid([
+                'md' => 1,
+                'xl' => 2,
             ])
             ->searchable()
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Action::make('viewFile') //view function
-                ->label('View File')
-                ->icon('heroicon-o-eye') 
-                ->url(fn (Document $record): string => route('documents.view', $record->id)) // Create a URL to the view action
-                ->openUrlInNewTab(),
+                    ->label('View')
+                    ->color('gray')
+                    ->icon('heroicon-s-eye') 
+                    ->url(fn (Document $record): string => route('documents.view', $record->id)) // Create a URL to the view action
+                    ->openUrlInNewTab(),
 
-                Tables\Actions\EditAction::make(),               
+                Tables\Actions\EditAction::make()
+                    ->color('gray'),               
                 Tables\Actions\DeleteAction::make()
                     ->after(function (Document $record) {
                         // Check if the file exists
@@ -160,8 +178,9 @@ class DocumentResource extends Resource
                             Storage::disk('public')->move($record->file_path, $newPath);
 
                          }
-                    }),
-            ]);
+                    }),               
+            ])
+            ->paginated([10, 20, 50, 100, 'all']);
     }
 
     public static function getRelations(): array

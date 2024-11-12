@@ -14,7 +14,7 @@
     }
 
     .fi-sidebar-header img {
-        @apply h-14;
+        @apply h-12;
     }
 
     /* Change the size of avatar */
@@ -24,5 +24,13 @@
 
     .fi-simple-header div img {
         @apply h-28;
+    }
+
+    div .fi-ta-actions {
+        @apply flex justify-end items-end;
+    }
+
+    .fi-ta-text-item svg {
+        @apply h-8 w-8;
     }
 }
