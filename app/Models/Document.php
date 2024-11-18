@@ -38,7 +38,20 @@ class Document extends Model
                             'description'
                         ];
 
+    public function deletedBy()
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
+    }
 
+    protected static function booted()
+    {
+        static::deleting(function ($document) {
+            if (auth()->check()) {
+                $document->deleted_by = auth()->id(); // Get user that deleted the document
+                $document->save();
+            }
+        });
+    }
     
     protected static $logAttributes = ['title', 'file_name', 'file_path', 'file_date', 'file_type',  'description' ];
 
@@ -52,17 +65,10 @@ class Document extends Model
         return LogOptions::defaults()
             ->useLogName('document') // Custom Name
             ->setDescriptionForEvent(fn(string $eventName) => "Document has been {$eventName}.") // Custom description
-            ->logOnly(['title', 'file_name', 'file_path', 'file_date', 'file_type',  'description' ]) // Showing the Activities
+            ->logOnly(['title', 'file_name', 'file_date', 'file_type',  'description' ]) // Showing the Activities
             ->logOnlyDirty(); // Show only the changed attributes (EDIT)
+      
     }
-
-    // To access user's name in the Users table using the user_id foreign key
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'user_id');
-    }
-
-    
 
 
 }

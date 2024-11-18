@@ -6,11 +6,42 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
 
-class User extends Authenticatable
+
+
+
+class User extends Authenticatable implements FilamentUser
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
+
+
+
+    const ROLE_SUPER_ADMIN = 'SUPER ADMIN';
+    const ROLE_ADMIN = 'ADMIN';
+
+    const ROLES = [
+        self::ROLE_SUPER_ADMIN => 'Super_Admin',
+        self::ROLE_ADMIN => 'Admin',
+    ];
+
+
+
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->isSuperAdmin() || $this->isAdmin();
+    }
+
+    public function isSuperAdmin(){
+        return $this->role === self::ROLE_SUPER_ADMIN;
+    }
+
+    public function isAdmin(){
+        return $this->role === self::ROLE_ADMIN;
+    }
+
 
     /**
      * The attributes that are mass assignable.
@@ -19,6 +50,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'role',
         'email',
         'password',
     ];

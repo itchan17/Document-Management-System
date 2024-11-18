@@ -29,7 +29,7 @@ class DeletedFilesResource extends Resource
 
     protected static ?string $pluralLabel = 'Deleted Files';
 
-    protected static ?string $navigationGroup = 'Admin Tools';
+    protected static ?string $navigationGroup = 'Trash';
 
     public static function form(Form $form): Form
     {

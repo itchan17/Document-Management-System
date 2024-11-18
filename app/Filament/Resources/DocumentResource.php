@@ -34,6 +34,9 @@ use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\Layout\View;
 use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Enums\ActionsPosition;
+use Illuminate\Support\Facades\Auth;
+use Filament\Notifications\Notification;
+
 
 class DocumentResource extends Resource
 {
@@ -46,7 +49,6 @@ class DocumentResource extends Resource
     protected ?string $heading = 'Upload Document';
 
     protected static ?string $navigationGroup = 'Documents';
-
 
     public static function form(Form $form): Form
     {
@@ -161,8 +163,21 @@ class DocumentResource extends Resource
                     ->label('View')
                     ->color('gray')
                     ->icon('heroicon-s-eye') 
-                    ->url(fn (Document $record): string => route('documents.view', $record->id)) // Create a URL to the view action
-                    ->openUrlInNewTab(),
+                    ->url(fn (Document $record): string => 
+                        Storage::disk('public')->exists($record->file_path)
+                            ? route('documents.view', $record->id)
+                            : ''
+                    )
+                    ->openUrlInNewTab()
+                    ->after(function (Document $record) { //notification if file does not exist 
+                        if (!Storage::disk('public')->exists($record->file_path)) {
+                            Notification::make()
+                                ->title('File not found')
+                                ->danger()
+                                ->send(); 
+                        }
+                    }),
+                
 
                 Tables\Actions\EditAction::make()
                     ->color('gray'),               
