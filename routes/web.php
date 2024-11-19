@@ -12,3 +12,4 @@ Route::get('/', function () {
 Route::get('/documents/{id}/view', [DocumentController::class, 'view'])->name('documents.view');
 
 Route::get('/requests', Requests::class);
+
