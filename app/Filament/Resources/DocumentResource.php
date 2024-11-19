@@ -199,13 +199,13 @@ class DocumentResource extends Resource
                     ->color('gray')
                     ->icon('heroicon-s-eye') 
                     ->url(fn (Document $record): string => 
-                        Storage::disk('public')->exists($record->file_path)
+                        Storage::disk('local')->exists($record->file_path)
                             ? route('documents.view', $record->id)
                             : ''
                     )
                     ->openUrlInNewTab()
                     ->after(function (Document $record) { //notification if file does not exist 
-                        if (!Storage::disk('public')->exists($record->file_path)) {
+                        if (!Storage::disk('local')->exists($record->file_path)) {
                             Notification::make()
                                 ->title('File not found')
                                 ->danger()
