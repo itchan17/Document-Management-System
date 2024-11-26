@@ -7,6 +7,9 @@ use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 use Smalot\PdfParser\Parser;
 use thiagoalessio\TesseractOCR\TesseractOCR;
+use App\Models\Folder;
+use Carbon\Carbon;
+use App\Filament\Pages\CreateDocument;
 
 class EditDocument extends EditRecord
 {
@@ -15,6 +18,9 @@ class EditDocument extends EditRecord
     // Convert pdf to text if ever file has been changed
     protected function mutateFormDataBeforeSave(array $data): array
     {    
+        //Instantiate CreateDocument
+        $createDocument = new CreateDocument();
+
         $extension = $data['file_extension'];
 
         $parser = new Parser();
@@ -40,6 +46,9 @@ class EditDocument extends EditRecord
 
             $data['file_content'] = $fileContents; // Insert the content in the $data array
         }
+
+        // Add date and time if new document is added in the folder
+        $createDocument->updateDateModified($data['folder_id']);
 
         return $data;  // Return the data to be save in database
     }

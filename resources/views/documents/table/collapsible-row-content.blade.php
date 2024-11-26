@@ -9,15 +9,6 @@
             {{ $getRecord()->file_date }}
         </span>
     </div>
-    <div>
-        <span class="font-medium">
-            File Type:
-        </span>
-
-        <span>
-            {{ ucfirst($getRecord()->file_type) }}
-        </span>
-    </div>
 
     <div>
         <span class="font-medium">

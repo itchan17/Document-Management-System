@@ -1,21 +1,21 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Resources\FolderResource\RelationManagers;
 
-
-use App\Filament\Resources\DocumentResource\Pages;
-use App\Filament\Resources\DocumentResource\RelationManagers;
-use App\Filament\Resources\DocumentResource\Pages\ListDocumentActivities;
-use App\Models\Document;
 use Filament\Forms;
 use Filament\Forms\Form;
-use Filament\Resources\Resource;
+use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Filament\Forms\Components\FileUpload;
+use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Support\Enums\FontWeight;
+use Filament\Tables\Columns\Layout\View;
+use App\Models\Document; 
+use Filament\Forms\Components\Section;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Grid;
@@ -23,44 +23,21 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\DatePicker;
 use Smalot\PdfParser\Parser;
 use Illuminate\Validation\Rule; 
-use Closure;
-use Illuminate\Support\Facades\Storage;
-use Filament\Forms\Components\Section;
-use Filament\Tables\Columns\Layout\Stack;
-use Filament\Tables\Columns\IconColumn;
-use Filament\Tables\Columns\Layout\Split;
-use Filament\Tables\Columns\Layout\Panel;
-use Filament\Support\Enums\FontWeight;
-use Filament\Tables\Columns\Layout\View;
-use Filament\Tables\Actions\ActionGroup;
-use Filament\Tables\Enums\ActionsPosition;
-use Illuminate\Support\Facades\Auth;
-use Filament\Notifications\Notification;
-use thiagoalessio\TesseractOCR\TesseractOCR;
-use Filament\Forms\Set;
 use Filament\Forms\Components\Hidden;
-use Filament\Tables\Actions\CreateAction;
-use Filament\Actions\StaticAction;
-use Filament\Tables\Actions\Action;
+use Filament\Forms\Set;
+use Closure;
+use thiagoalessio\TesseractOCR\TesseractOCR;
+use Filament\Forms\Get;
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Folder;
+use Carbon\Carbon;
+use App\Filament\Pages\CreateDocument;
 
-class DocumentResource extends Resource
+class GetDocumentsRelationManager extends RelationManager
 {
-    protected static ?string $model = Document::class;
+    protected static string $relationship = 'documents';
 
-    protected static ?string $navigationIcon = 'heroicon-s-document';
-
-    protected static ?string $navigationLabel = 'Documents';
-
-    protected ?string $heading = 'Upload Document';
-
-    protected static ?string $navigationGroup = 'Documents';
-
-    protected static ?int $navigationSort = 4;
-
-    // protected static bool $shouldRegisterNavigation = false;
-
-    public static function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form
         ->schema([
@@ -126,11 +103,8 @@ class DocumentResource extends Resource
                         ]), 
             ])->columnSpan('full'),
             Hidden::make('file_extension'),
-            Section::make('Document Details')
-            ->columns([
-                'sm' => 1,
-                'md' => 3,                 
-            ])
+            Section::make('Document Details') 
+            ->columns(['sm' => 1, 'md' => 3])
             ->schema([
                 TextInput::make('title')
                         ->label('Title')
@@ -155,14 +129,15 @@ class DocumentResource extends Resource
                                     }
                                 };
                             },
-                        ]), 
+                        ]),   
                 DatePicker::make('file_date')
                     ->label('File Date')
                     ->required(),
                 Select::make('folder_id')
                     ->label('Select Folder')  
                     ->relationship('getFolder', 'folder_name')
-                    ->suffixIcon('heroicon-s-folder'),
+                    ->hiddenOn('create')
+                    ->suffixIcon('heroicon-s-folder'),  
                 TextArea::make('description')
                     ->label('Description')
                     ->maxLength(255)
@@ -170,20 +145,20 @@ class DocumentResource extends Resource
                     ->rows(3),
                            
             ])->columnSpan('full'),
-        ])->statePath('data');
+        ]);
     }
- 
-    public static function table(Table $table): Table
+
+    public function table(Table $table): Table
     {
         return $table
-            ->recordUrl(null) 
+            ->recordTitleAttribute('title')
             ->columns([
                 Stack::make([                  
                     TextColumn::make('title')
                         ->weight(FontWeight::Medium)
                         ->size(TextColumn\TextColumnSize::Medium),       
                     TextColumn::make('file_name')
-                        ->icon('heroicon-s-document')
+                        ->icon('heroicon-s-document-text')
                         ->iconColor('primary'),
                 ]),
                 View::make('documents.table.collapsible-row-content')
@@ -194,59 +169,85 @@ class DocumentResource extends Resource
                 'xl' => 2,
             ])
             ->searchable()
-            ->defaultSort('created_at', 'desc')
-            ->actions([
-                Action::make('viewFile') //view function
-                    ->label('View')
-                    ->color('gray')
-                    ->icon('heroicon-s-eye') 
-                    ->url(fn (Document $record): string => 
-                        Storage::disk('local')->exists($record->file_path)
-                            ? route('documents.view', $record->id)
-                            : ''
-                    )
-                    ->openUrlInNewTab()
-                    ->after(function (Document $record) { //notification if file does not exist 
-                        if (!Storage::disk('local')->exists($record->file_path)) {
-                            Notification::make()
-                                ->title('File not found')
-                                ->danger()
-                                ->send(); 
-                        }
-                    }),
-                
-
-                Tables\Actions\EditAction::make()
-                    ->color('gray'),               
-                Tables\Actions\DeleteAction::make()
-                    ->after(function (Document $record) {
-                        // Check if the file exists
-                        if (Storage::disk('local')->exists($record->file_path)) {
-
-                            // Create the new file path with archive directory
-                            $newPath = 'archives'.'/'. basename($record->file_path);
-
-                            // Move the file to archive directory
-                            Storage::disk('local')->move($record->file_path, $newPath);
-                         }
-                    }),               
+            ->filters([
+                //
             ])
-            ->paginated([10, 20, 50, 100, 'all']);
+            ->headerActions([
+                Tables\Actions\CreateAction::make()
+                    ->createAnother(false)
+                    ->mutateFormDataUsing(function (array $data, $livewire): array {
+                        $extension = $data['file_extension'];
+
+                        $parser = new Parser();
+                        
+                        $filePath = $data['file_path'];  
+
+                        $extension = $data['file_extension'];  
+
+                        $images = [
+                            'jpg',      
+                            'png',       
+                            'webp'       
+                        ];
+
+                        if (in_array($extension, $images)){
+
+                            $text = (new TesseractOCR(storage_path('app/private/' . $filePath)))->lang('eng')->run();  // Process the image and extract text
+
+                            $data['file_content'] = $text; 
+                        }   
+                        elseif($extension == "pdf") {
+
+                            $fileContents = $parser->parseFile(storage_path('app/private/' . $filePath))->getText();  // Extract the text
+
+                            $data['file_content'] = $fileContents; // Insert the content in the $data array
+                        }
+                        $data['user_id'] = auth()->id(); 
+
+                        
+
+                        // Add date and time if new document is added in the folder
+                        $folderId = $livewire->ownerRecord->id;
+
+                        $createDocument = new CreateDocument();
+
+                        $createDocument->updateDateModified($folderId);
+
+                        return $data;  // Return the data to be save in database
+                    }),
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make()  
+                ->mutateFormDataUsing(function (array $data, $livewire): array {
+
+                    // Add date and time if new document is added in the folder
+                    $createDocument = new CreateDocument();
+
+                    $createDocument->updateDateModified($data['folder_id']);
+
+                    return $data;  // Return the data to be save in database
+                }),  
+                Tables\Actions\DeleteAction::make(),
+            ]);
     }
 
-    public static function getRelations(): array
+    public function isReadOnly(): bool
     {
-        return [
-            //
-        ];
+        return false;
     }
 
-    public static function getPages(): array
+    protected function applySearchToTableQuery(Builder $query): Builder
     {
-        return [
-            'index' => Pages\ListDocuments::route('/'),
-            'create' => Pages\CreateDocument::route('/create'),
-            'edit' => Pages\EditDocument::route('/{record}/edit'),
-        ];
+        // Check if there is a search query
+        if (filled($search = $this->getTableSearch())) {
+            
+            // Use MeiliSearch to get the matching document IDs
+            $documentIds = Document::search($search)->keys();
+
+            // Apply the search results to the Eloquent query
+            $query->whereIn('id', $documentIds);
+         
+        }
+        return $query;
     }
 }

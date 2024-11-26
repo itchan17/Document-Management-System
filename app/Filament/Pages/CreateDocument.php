@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\Document;
+use App\Models\Folder;
 use Filament\Pages\Page;
 use Filament\Forms\Form;
 use Filament\Forms\Contracts\HasForms;
@@ -26,12 +27,13 @@ use Intervention\Image\Facades\Image;
 use Filament\Forms\Set;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
+use Carbon\Carbon;
 
 class CreateDocument extends Page implements HasForms
 {
     use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-s-document-text';
+    protected static ?string $navigationIcon = 'heroicon-s-arrow-up-on-square';
 
     protected static string $view = 'filament.pages.create-document';
 
@@ -131,14 +133,10 @@ class CreateDocument extends Page implements HasForms
                     DatePicker::make('file_date')
                         ->required()
                         ->label('File Date'),
- 
-                    Select::make('file_type')
-                        ->required()
-                        ->label('File Type')  
-                        ->options([
-                            'contracts' => 'Contracts',
-                            'agreements' => 'Agreements',
-                        ]), 
+                    Select::make('folder_id')
+                        ->label('Select Folder')  
+                        ->options(Folder::all()->pluck('folder_name', 'id'))
+                        ->suffixIcon('heroicon-s-folder'),
                     TextArea::make('description')
                         ->label('Description')
                         ->maxLength(255)
@@ -151,7 +149,7 @@ class CreateDocument extends Page implements HasForms
 
     public function create(): void
     {
-        
+           
             $data = $this->form->getState();
       
             $parser = new Parser();
@@ -177,18 +175,24 @@ class CreateDocument extends Page implements HasForms
 
                 $data['file_content'] = $fileContents; // Insert the content in the $data array
             }
-        
+
+            // Add date and time if new document is added in the folder
+            
+            $this->updateDateModified($data['folder_id']);
+
             // Save the data to the database
             Document::create([
                 'title' => $data['title'],
                 'file_name' => $data['file_name'], 
-                'file_type' => $data['file_type'],
+                'folder' => $data['folder_id'],
                 'file_date' => $data['file_date'],
                 'file_path' => $data['file_path'], 
                 'description' => $data['description'], 
                 'file_content' => $data['file_content'], 
                 'user_id' => auth()->id(),
             ]);
+
+           
 
             Notification::make()
                 ->success()
@@ -197,6 +201,25 @@ class CreateDocument extends Page implements HasForms
 
             $this->form->fill();
        
+    }
+
+    // Update the date_modified column of folders
+    public function updateDateModified($id):void 
+    {
+        if($id){
+
+            // find the row
+            $folder = Folder::find($id);
+            
+            // get the current time and change the format
+            $date_modified = Carbon::now(config('app.timezone'))->format('Y-m-d H:i:s');
+
+            // update the column
+            $folder->date_modified = $date_modified;
+
+            $folder->save();
+
+        }
     }
 
 

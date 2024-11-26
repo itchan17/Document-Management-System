@@ -32,11 +32,16 @@ class Document extends Model
                             'file_name',
                             'file_path', 
                             'file_date', 
-                            'file_type', 
+                            'folder', 
                             'user_id', 
                             'file_content', 
                             'description'
                         ];
+                        
+    public function getFolder()
+    {
+        return $this->belongsTo(Folder::class, 'folder');
+    }
 
     public function deletedBy()
     {
@@ -69,6 +74,4 @@ class Document extends Model
             ->logOnlyDirty(); // Show only the changed attributes (EDIT)
       
     }
-
-
 }
