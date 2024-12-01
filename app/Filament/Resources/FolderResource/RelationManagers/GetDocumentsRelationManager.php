@@ -32,6 +32,8 @@ use Illuminate\Database\Eloquent\Model;
 use App\Models\Folder;
 use Carbon\Carbon;
 use App\Filament\Pages\CreateDocument;
+use Exception;
+use Illuminate\Support\Facades\Storage;
 
 class GetDocumentsRelationManager extends RelationManager
 {
@@ -40,27 +42,96 @@ class GetDocumentsRelationManager extends RelationManager
     public function form(Form $form): Form
     {
         return $form
-        ->schema([
-            Section::make('Upload FIle')
             ->schema([
-                FileUpload::make('file_path')
-                        ->label('File')                 
-                        ->disk('local')
+                Section::make('Upload FIle')
+                ->columns([
+                    'sm' => 1,
+                    'md' => 3,                 
+                ])
+                ->schema([
+                    // Uploading images
+                    FileUpload::make('file_path')
+                        ->required()
                         ->visibility('private')
+                        ->label('Image') 
+                        ->disk('local')
                         ->directory('documents')
-                        ->storeFileNamesIn('file_name')
+                        ->storeFileNamesIn('file_name')   
+                        ->multiple()
+                        ->columnSpan([
+                            'sm' => 1,
+                            'md' => 2,                 
+                        ])
+                        ->visible(function (Get $get) {
+                            return $get('file_type') == 'image';
+                        })
                         ->acceptedFileTypes([
-                            'application/pdf',
                             'image/jpeg',     
                             'image/png',   
                             'image/webp'        
-                        ])  
-                        ->afterStateUpdated(function ($state, Set $set) {
-                            if ($state) {
-                                // Store the file extension in the form state
-                                $set('file_extension', $state->extension());
+                        ])
+                        ->afterStateHydrated(function ($state, callable $set, Get $get) {
+
+                            // Convert the file names into an array                      
+                            if($get('file_type') == 'image'){
+
+                                $set('file_name', is_array($get('file_name')) ? $get('file_name') : [$get('file_path') => $get('file_name')]);
                             }
-                        })              
+                        })
+                        ->rules([
+                            function () {
+                                return function (string $attribute, $value, Closure $fail) {
+                                    if ($value) {                                   
+                                        // Get the original file name
+                                        $fileName = $value->getClientOriginalName(); 
+
+                                        // Check if the file/file_name already exists
+                                        $exists = Document::where('file_name', $fileName)->exists();
+                                        
+                                        // If exists throw message saying the file already exists
+                                        if ($exists) {                                            
+                                            $fail("The image '{$fileName}' already exists.");
+                                        }
+                                    }
+                                };
+                            },
+                            function () {
+                                return function (string $attribute, $value, Closure $fail) {
+
+                                    $fileName = $value->getClientOriginalName(); 
+
+                                    try {
+                                        // try to extract text from the file
+                                        $text = (new TesseractOCR($value->getRealPath()))->lang('eng')->run(); 
+                                    }  
+                                    catch (Exception $e) {
+
+                                        // send an error thath there's no text that can be extracted
+                                        $fail("The image '{$fileName}' contains no readable text.");
+
+                                    }                                                            
+                                    
+                                };
+                            },
+                        ]),
+
+                    // Uploading file
+                    FileUpload::make('file_path')
+                        ->visible(function (Get $get) {
+                            return $get('file_type') == 'pdf';
+                        })
+                        ->columnSpan([
+                            'sm' => 1,
+                            'md' => 2,                 
+                        ])
+                        ->required()
+                        ->label('File')                 
+                        ->disk('local')
+                        ->directory('documents')
+                        ->storeFileNamesIn('file_name')   
+                        ->acceptedFileTypes([
+                            'application/pdf',       
+                        ])            
                         ->rules([
                             function () {
                                 return function (string $attribute, $value, Closure $fail) {
@@ -80,72 +151,68 @@ class GetDocumentsRelationManager extends RelationManager
                             },
                             function () {
                                 return function (string $attribute, $value, Closure $fail) {
-                                    $mimeType = $value->getMimeType();
 
-                                    $acceptedTypes = [
-                                        'image/jpeg',      
-                                        'image/png',       
-                                        'image/webp'       
-                                    ];
-                                    // check if the field has value and mimetype is in the array
-                                    if ($value && in_array($mimeType, $acceptedTypes)) {    
-                                        try {
-                                            // try to extract text from the file
-                                            $text = (new TesseractOCR($value->getRealPath()))->lang('eng')->run();
-                                        }  
-                                        catch (\Exception $e) {
-                                            // send an error thath there's no text that can be extracted
-                                            $fail("Can't read the file.");
-                                        }                                                            
+                                    $parser = New Parser();
+                                    $fileName = $value->getClientOriginalName(); 
+
+                                    if ($value) {  
+                                        try{
+                                            $text = $parser->parseFile($value->getRealPath())->getText();
+                                            if(empty($text)) {
+                                                $fail("The file '{$fileName}' contains no searchable text.");  
+                                            }
+                                        }   
+                                        catch(Exception $e){
+                                            $fail($e->getMessage());
+                                        }                                                                   
                                     }
                                 };
                             },
                         ]), 
-            ])->columnSpan('full'),
-            Hidden::make('file_extension'),
-            Section::make('Document Details') 
-            ->columns(['sm' => 1, 'md' => 3])
-            ->schema([
-                TextInput::make('title')
-                        ->label('Title')
+                        Select::make('file_type')
                         ->required()
+                        ->live()
+                        ->afterStateUpdated(function (Get $get, Set $set) {
+                            $set('file_path', null);
+                            $set('file_name', null);
+                        })
+                        ->options([
+                            'image' => 'Image',
+                            'pdf' => 'PDF',
+                        ])
+                        ->default('pdf')             
+                ])->columnSpan('full'),
+                Hidden::make('file_extension'),
+                Section::make('Document Details')
+                ->columns([
+                    'sm' => 1,
+                    'md' => 3,                 
+                ])
+                ->schema([
+                    TextInput::make('title')
+                            ->unique(ignoreRecord: true)
+                            ->validationMessages([
+                                'unique' => 'The :attribute already exists.',
+                            ])
+                            ->required()
+                            ->label('Title')
+                            ->maxLength(255)
+                            ->rules(['regex:/^[a-zA-Z0-9\s_-]*$/']),
+                    DatePicker::make('file_date')
+                        ->required()
+                        ->label('File Date'),
+                    Select::make('folder')
+                        ->label('Select Folder')  
+                        ->options(Folder::all()->pluck('folder_name', 'id'))
+                        ->suffixIcon('heroicon-s-folder'),
+                    TextArea::make('description')
+                        ->label('Description')
                         ->maxLength(255)
-                        ->rules([
-                            function (?Model $record) {
-
-                                return function (string $attribute, $value, Closure $fail) use ($record) {
-                                   // Check if the new value and previous value is same
-                                   $prevValue = ($record && $record->title == $value) ? true : false;
-
-                                    if ($value) {                                          
-
-                                        // Check if the file/file_name already exists
-                                        $exists = Document::where('title', $value)->exists();
-
-                                        // If exists throw message saying the file already exists
-                                        if ($exists && !$prevValue) {                                            
-                                            $fail("The title already exists.");
-                                        }
-                                    }
-                                };
-                            },
-                        ]),   
-                DatePicker::make('file_date')
-                    ->label('File Date')
-                    ->required(),
-                Select::make('folder_id')
-                    ->label('Select Folder')  
-                    ->relationship('getFolder', 'folder_name')
-                    ->hiddenOn('create')
-                    ->suffixIcon('heroicon-s-folder'),  
-                TextArea::make('description')
-                    ->label('Description')
-                    ->maxLength(255)
-                    ->columnSpan('full')
-                    ->rows(3),
-                           
-            ])->columnSpan('full'),
-        ]);
+                        ->columnSpan('full')
+                        ->rows(3),
+                               
+                ])->columnSpan('full'),
+            ]);
     }
 
     public function table(Table $table): Table
@@ -176,40 +243,40 @@ class GetDocumentsRelationManager extends RelationManager
                 Tables\Actions\CreateAction::make()
                     ->createAnother(false)
                     ->mutateFormDataUsing(function (array $data, $livewire): array {
-                        $extension = $data['file_extension'];
 
-                        $parser = new Parser();
+                        //Instantiate CreateDocument
+                        $createDocument = new CreateDocument();
                         
-                        $filePath = $data['file_path'];  
+                        // extract the file
+                        $data['file_content'] = ($createDocument->extractContent($data));
+                        
+                        // check if file_path is an array which means it is multiple images
+                        // then run the method that compile those images in pdf
+                        if (is_array($data['file_path']) && count($data['file_path']) == 1 && $data['file_type'] == 'image'){
+                            
+                            $data['file_path'] = $data['file_path'][0];
 
-                        $extension = $data['file_extension'];  
+                            $data['file_name'] = $data['file_name'][$data['file_path']];
 
-                        $images = [
-                            'jpg',      
-                            'png',       
-                            'webp'       
-                        ];
-
-                        if (in_array($extension, $images)){
-
-                            $text = (new TesseractOCR(storage_path('app/private/' . $filePath)))->lang('eng')->run();  // Process the image and extract text
-
-                            $data['file_content'] = $text; 
-                        }   
-                        elseif($extension == "pdf") {
-
-                            $fileContents = $parser->parseFile(storage_path('app/private/' . $filePath))->getText();  // Extract the text
-
-                            $data['file_content'] = $fileContents; // Insert the content in the $data array
                         }
-                        $data['user_id'] = auth()->id(); 
+                        elseif (is_array($data['file_path']) && count($data['file_path']) > 1  && $data['file_type'] == 'image') {
 
-                        
+                            $file_path_arr = $data['file_path'];
+
+                            $newData = ($createDocument->convertImagesToPDF($data['file_path'], $data['title']));
+
+                            $data['file_path'] =  $newData['file_path'];
+                            $data['file_name'] =  $newData['file_name'];
+                            $data['file_type'] =  $newData['file_type'];
+
+                            foreach($file_path_arr as $path){
+                                Storage::disk('local')->delete($path);
+                            }
+                        } 
+                        $data['user_id'] = auth()->id(); 
 
                         // Add date and time if new document is added in the folder
                         $folderId = $livewire->ownerRecord->id;
-
-                        $createDocument = new CreateDocument();
 
                         $createDocument->updateDateModified($folderId);
 
@@ -223,7 +290,7 @@ class GetDocumentsRelationManager extends RelationManager
                     // Add date and time if new document is added in the folder
                     $createDocument = new CreateDocument();
 
-                    $createDocument->updateDateModified($data['folder_id']);
+                    $createDocument->updateDateModified($data['folder']);
 
                     return $data;  // Return the data to be save in database
                 }),  

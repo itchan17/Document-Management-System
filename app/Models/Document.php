@@ -28,6 +28,10 @@ class Document extends Model
         ];
     }
 
+    // protected $casts = [
+    //     'file_path' => 'array',
+    // ];
+
     protected $fillable = [ 'title', 
                             'file_name',
                             'file_path', 
@@ -35,7 +39,8 @@ class Document extends Model
                             'folder', 
                             'user_id', 
                             'file_content', 
-                            'description'
+                            'description',
+                            'file_type'
                         ];
                         
     public function getFolder()

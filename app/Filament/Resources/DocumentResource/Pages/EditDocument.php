@@ -10,6 +10,7 @@ use thiagoalessio\TesseractOCR\TesseractOCR;
 use App\Models\Folder;
 use Carbon\Carbon;
 use App\Filament\Pages\CreateDocument;
+use Illuminate\Support\Facades\Storage;
 
 class EditDocument extends EditRecord
 {
@@ -18,37 +19,39 @@ class EditDocument extends EditRecord
     // Convert pdf to text if ever file has been changed
     protected function mutateFormDataBeforeSave(array $data): array
     {    
+
         //Instantiate CreateDocument
         $createDocument = new CreateDocument();
 
-        $extension = $data['file_extension'];
-
-        $parser = new Parser();
+        // extract the file
+        $data['file_content'] = ($createDocument->extractContent($data));
         
-        $filePath = $data['file_path'];  
+        // check if file_path is an array which means it is multiple images
+        // then run the method that compile those images in pdf
+        if (is_array($data['file_path']) && count($data['file_path']) == 1 && $data['file_type'] == 'image'){
+            
+            $data['file_path'] = $data['file_path'][0];
 
-        $extension = $data['file_extension'];  
+            $data['file_name'] = $data['file_name'][$data['file_path']];
 
-        $images = [
-            'jpg',      
-            'png',       
-            'webp'       
-        ];
-        if (in_array($extension, $images)){
-
-            $text = (new TesseractOCR(storage_path('app/private/' . $filePath)))->lang('eng')->run();  // Process the image and extract text
-
-            $data['file_content'] = $text; 
-        }   
-        elseif($extension == "pdf") {
-
-            $fileContents = $parser->parseFile(storage_path('app/private/' . $filePath))->getText();  // Extract the text
-
-            $data['file_content'] = $fileContents; // Insert the content in the $data array
         }
+        elseif (is_array($data['file_path']) && count($data['file_path']) > 1  && $data['file_type'] == 'image') {
 
+            $file_path_arr = $data['file_path'];
+
+            $newData = ($createDocument->convertImagesToPDF($data['file_path'], $data['title']));
+
+            $data['file_path'] =  $newData['file_path'];
+            $data['file_name'] =  $newData['file_name'];
+            $data['file_type'] =  $newData['file_type'];
+
+            foreach($file_path_arr as $path){
+                Storage::disk('local')->delete($path);
+            }
+        } 
+        
         // Add date and time if new document is added in the folder
-        $createDocument->updateDateModified($data['folder_id']);
+        $createDocument->updateDateModified($data['folder']);
 
         return $data;  // Return the data to be save in database
     }
