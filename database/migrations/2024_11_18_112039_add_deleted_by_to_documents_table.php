@@ -12,7 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('documents', function (Blueprint $table) {
-            $table->string('file_type')->after('file_path'); // Limutan lagyan
+            $table->foreignId('deleted_by')->nullable()->constrained('users');
+
         });
     }
 
@@ -22,7 +23,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('documents', function (Blueprint $table) {
-            //
+              $table->dropColumn('deleted_by');
         });
     }
 };

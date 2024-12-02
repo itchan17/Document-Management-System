@@ -2,8 +2,10 @@
 
 namespace App\Filament\Resources;
 
+
 use App\Filament\Resources\DocumentResource\Pages;
 use App\Filament\Resources\DocumentResource\RelationManagers;
+use App\Filament\Resources\DocumentResource\Pages\ListDocumentActivities;
 use App\Models\Document;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -17,89 +19,220 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Grid;
-use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\DatePicker;
+use Smalot\PdfParser\Parser;
+use Illuminate\Validation\Rule; 
+use Closure;
+use Illuminate\Support\Facades\Storage;
+use Filament\Forms\Components\Section;
+use Filament\Tables\Columns\Layout\Stack;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Panel;
+use Filament\Support\Enums\FontWeight;
+use Filament\Tables\Columns\Layout\View;
+use Filament\Tables\Actions\ActionGroup;
+use Filament\Tables\Enums\ActionsPosition;
+use Illuminate\Support\Facades\Auth;
+use Filament\Notifications\Notification;
+use thiagoalessio\TesseractOCR\TesseractOCR;
+use Filament\Forms\Set;
+use Filament\Forms\Components\Hidden;
+use Filament\Tables\Actions\CreateAction;
+use Filament\Actions\StaticAction;
+use Filament\Tables\Actions\Action;
+use Illuminate\Database\Eloquent\Model;
 
 class DocumentResource extends Resource
 {
     protected static ?string $model = Document::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-s-document';
+
     protected static ?string $navigationLabel = 'Documents';
 
+    protected ?string $heading = 'Upload Document';
+
+    protected static ?string $navigationGroup = 'Documents';
+
+    protected static ?int $navigationSort = 4;
+
+    // protected static bool $shouldRegisterNavigation = false;
 
     public static function form(Form $form): Form
     {
-        return $form->schema([
-        Grid::make(1)->schema([ //Grid for line by line form inputs
-            TextInput::make('title')
-                ->label('Title')
-                ->required()
-                ->maxLength(255),
+        return $form
+        ->schema([
+            Section::make('Upload FIle')
+            ->schema([
+                FileUpload::make('file_path')
+                        ->label('File')                 
+                        ->disk('local')
+                        ->visibility('private')
+                        ->directory('documents')
+                        ->storeFileNamesIn('file_name')
+                        ->acceptedFileTypes([
+                            'application/pdf',
+                            'image/jpeg',     
+                            'image/png',   
+                            'image/webp'        
+                        ])  
+                        ->afterStateUpdated(function ($state, Set $set) {
+                            if ($state) {
+                                // Store the file extension in the form state
+                                $set('file_extension', $state->extension());
+                            }
+                        })              
+                        ->rules([
+                            function () {
+                                return function (string $attribute, $value, Closure $fail) {
+                                    if ($value) {                                   
+                                        // Get the original file name
+                                        $fileName = $value->getClientOriginalName(); 
 
-            Select::make('file_type') 
-                ->label('File Type')
-                ->options([ //Combo box of selection ng types
-                    'contracts' => 'Contracts',
-                    'agreements' => 'Agreements',
-                ])
-                ->required(),
+                                        // Check if the file/file_name already exists
+                                        $exists = Document::where('file_name', $fileName)->exists();
+                                        
+                                        // If exists throw message saying the file already exists
+                                        if ($exists) {                                            
+                                            $fail("The file '{$fileName}' already exists.");
+                                        }
+                                    }
+                                };
+                            },
+                            function () {
+                                return function (string $attribute, $value, Closure $fail) {
+                                    $mimeType = $value->getMimeType();
 
+                                    $acceptedTypes = [
+                                        'image/jpeg',      
+                                        'image/png',       
+                                        'image/webp'       
+                                    ];
+                                    // check if the field has value and mimetype is in the array
+                                    if ($value && in_array($mimeType, $acceptedTypes)) {    
+                                        try {
+                                            // try to extract text from the file
+                                            $text = (new TesseractOCR($value->getRealPath()))->lang('eng')->run();
+                                        }  
+                                        catch (\Exception $e) {
+                                            // send an error thath there's no text that can be extracted
+                                            $fail("Can't read the file.");
+                                        }                                                            
+                                    }
+                                };
+                            },
+                        ]), 
+            ])->columnSpan('full'),
+            Hidden::make('file_extension'),
+            Section::make('Document Details')
+            ->columns([
+                'sm' => 1,
+                'md' => 3,                 
+            ])
+            ->schema([
+                TextInput::make('title')
+                        ->label('Title')
+                        ->required()
+                        ->maxLength(255)
+                        ->rules([
+                            function (?Model $record) {
 
-            FileUpload::make('file_path') 
-                ->disk('localUpload')
-                ->label('Upload')
-                ->required()
-                ->acceptedFileTypes(['application/pdf'])
-            ]),
-        ]);
+                                return function (string $attribute, $value, Closure $fail) use ($record) {
+                                   // Check if the new value and previous value is same
+                                   $prevValue = ($record && $record->title == $value) ? true : false;
+
+                                    if ($value) {                                          
+
+                                        // Check if the file/file_name already exists
+                                        $exists = Document::where('title', $value)->exists();
+
+                                        // If exists throw message saying the file already exists
+                                        if ($exists && !$prevValue) {                                            
+                                            $fail("The title already exists.");
+                                        }
+                                    }
+                                };
+                            },
+                        ]), 
+                DatePicker::make('file_date')
+                    ->label('File Date')
+                    ->required(),
+                Select::make('folder_id')
+                    ->label('Select Folder')  
+                    ->relationship('getFolder', 'folder_name')
+                    ->suffixIcon('heroicon-s-folder'),
+                TextArea::make('description')
+                    ->label('Description')
+                    ->maxLength(255)
+                    ->columnSpan('full')
+                    ->rows(3),
+                           
+            ])->columnSpan('full'),
+        ])->statePath('data');
     }
-
+ 
     public static function table(Table $table): Table
     {
         return $table
+            ->recordUrl(null) 
             ->columns([
-                TextColumn::make('title')
-                ->searchable(),
-
-                TextColumn::make('file_type')
-                ->label('File Type')
-                ->searchable(),
-                
-                TextColumn::make('user.name') 
-                ->label('Uploaded By'),
-
-                TextColumn::make('created_at')
-                ->label('Created At')
-                ->date(),
-
-                TextColumn::make('updated_at')
-                ->label('Updated At')
-                ->date(),
-
-            ])
-            ->filters([
-                //
-            ])
-            ->actions([
-                Action::make('viewFile')
-                ->label('View File')
-                ->icon('heroicon-o-eye') 
-                ->url(fn (Document $record): string => route('documents.view', $record->id)) // Create a URL to the view action
-                ->openUrlInNewTab(),
-
-
-                Tables\Actions\EditAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                Stack::make([                  
+                    TextColumn::make('title')
+                        ->weight(FontWeight::Medium)
+                        ->size(TextColumn\TextColumnSize::Medium),       
+                    TextColumn::make('file_name')
+                        ->icon('heroicon-s-document')
+                        ->iconColor('primary'),
                 ]),
-            ]);
+                View::make('documents.table.collapsible-row-content')
+                    ->collapsible(),     
+            ])
+            ->contentGrid([
+                'md' => 1,
+                'xl' => 2,
+            ])
+            ->searchable()
+            ->defaultSort('created_at', 'desc')
+            ->actions([
+                Action::make('viewFile') //view function
+                    ->label('View')
+                    ->color('gray')
+                    ->icon('heroicon-s-eye') 
+                    ->url(fn (Document $record): string => 
+                        Storage::disk('local')->exists($record->file_path)
+                            ? route('documents.view', $record->id)
+                            : ''
+                    )
+                    ->openUrlInNewTab()
+                    ->after(function (Document $record) { //notification if file does not exist 
+                        if (!Storage::disk('local')->exists($record->file_path)) {
+                            Notification::make()
+                                ->title('File not found')
+                                ->danger()
+                                ->send(); 
+                        }
+                    }),
+                
+
+                Tables\Actions\EditAction::make()
+                    ->color('gray'),               
+                Tables\Actions\DeleteAction::make()
+                    ->after(function (Document $record) {
+                        // Check if the file exists
+                        if (Storage::disk('local')->exists($record->file_path)) {
+
+                            // Create the new file path with archive directory
+                            $newPath = 'archives'.'/'. basename($record->file_path);
+
+                            // Move the file to archive directory
+                            Storage::disk('local')->move($record->file_path, $newPath);
+                         }
+                    }),               
+            ])
+            ->paginated([10, 20, 50, 100, 'all']);
     }
-
-
-
 
     public static function getRelations(): array
     {

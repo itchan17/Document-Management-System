@@ -1,0 +1,36 @@
+@import "/vendor/filament/filament/resources/css/theme.css";
+
+@config 'tailwind.config.js';
+
+@layer components {
+    /* Put shadow in the sidebar */
+    .fi-sidebar-nav {
+        @apply shadow-[0_10px_15px_5px_rgba(0,0,0,0.1),_0_10px_10px_-5px_rgba(0,0,0,0.04)];
+    }
+
+    /* Change the size of logo and height of it's container */
+    .fi-sidebar-header div {
+        @apply h-full w-full font-sans;
+    }
+
+    .fi-sidebar-header img {
+        @apply h-12;
+    }
+
+    /* Change the size of avatar */
+    .fi-topbar img {
+        @apply h-12 w-12;
+    }
+
+    .fi-simple-header div img {
+        @apply h-28;
+    }
+
+    div .fi-ta-actions {
+        @apply flex justify-end items-end;
+    }
+
+    .fi-ta-text-item svg {
+        @apply h-8 w-8;
+    }
+}

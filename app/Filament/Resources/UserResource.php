@@ -18,29 +18,54 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Grid;
 use Filament\Tables\Actions\Action;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Section;
+use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user';
+    protected static ?string $navigationIcon = 'heroicon-s-user';
+
+    protected static ?string $navigationGroup = 'Admin Tools';
 
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                
+                Section::make('User Account')
+            ->columns([
+                'sm' => 1,
+                'md' => 3,                 
+            ])
+            ->schema([
+                TextInput::make('name')
+                        ->label('Full Name')
+                        ->required()
+                        ->maxLength(255),
 
+                TextInput::make('email')
+                        ->label('Email Address')
+                        ->required()
+                        ->email()
+                        ->unique(ignoreRecord: true)
+                        ->maxLength(255),
+        
+                TextInput::make('password')
+                        ->label('Password')
+                        ->required()
+                        ->password()
+                        ->dehydrateStateUsing(fn ($state) => Hash::make($state))
+                        ->dehydrated(fn ($state) => filled($state))
+                        ->required(fn (string $context): bool => $context === 'create')               
+                        ->maxLength(255),
 
+                Select::make('role')
+                        ->options(User::ROLES)
+                        ->required(),
 
-
-
-
-
-
-
-                
-            ]);
+            ])
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -51,6 +76,9 @@ class UserResource extends Resource
                 ->searchable(),
 
                 TextColumn::make('email')
+                ->searchable(),
+
+                TextColumn::make('role')
                 ->searchable(),
 
                 TextColumn::make('created_at')
