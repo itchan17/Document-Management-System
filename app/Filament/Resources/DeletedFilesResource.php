@@ -47,8 +47,8 @@ class DeletedFilesResource extends Resource
                 TextColumn::make('title')
                 ->searchable(),
 
-                TextColumn::make('file_type')
-                ->label('File Type')
+                TextColumn::make('getFolder.folder_name')
+                ->label('File Name')
                 ->searchable(),
 
                 TextColumn::make('created_at')
@@ -59,7 +59,7 @@ class DeletedFilesResource extends Resource
             ->filters([
                 TrashedFilter::make()
                 ->query(fn (Builder $query) => $query->onlyTrashed()), //filter para deleted lang kita
-        
+                
 
             ])
             ->actions([

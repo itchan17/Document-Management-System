@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources;
 use App\Filament\Resources\DocumentResource\Pages\ListDocumentActivities;
-
+use App\Filament\Resources\DocumentResource\Pages\ListDocumentViewLogs;
 use App\Filament\Resources\ActivityLogResource\Pages;
 use App\Filament\Resources\ActivityLogResource\RelationManagers;
 use App\Models\Document;
@@ -57,8 +57,8 @@ class ActivityLogResource extends Resource
                 TextColumn::make('title')
                 ->searchable(),
 
-                TextColumn::make('file_type')
-                ->label('File Type')
+                TextColumn::make('getFolder.folder_name')
+                ->label('File Name')
                 ->searchable(),
 
                 TextColumn::make('created_at')
@@ -73,7 +73,7 @@ class ActivityLogResource extends Resource
                 ->label('Status')
                 ->default('Active') 
                 ->formatStateUsing(fn ($record) => $record->deleted_at !== null 
-                    ? 'Deleted by ' . ($record->deletedBy ? $record->deletedBy->name : 'Unknown') 
+                    ? 'Deleted by ' . ($record->deletedBy ? $record->deletedBy->name . ' ' . $record->deletedBy->lastname : 'Unknown')
                     : 'Active')
                 ->color(fn ($record) => $record->deleted_at !== null ? 'danger' : 'success')
                 ->searchable(false)
@@ -84,12 +84,19 @@ class ActivityLogResource extends Resource
                 //
             ])
             ->actions([
+
+                    Action::make('viewlog')
+                        ->label('View History')
+                        ->url(fn ($record) => static::getUrl('viewlog', ['record' => $record->id])),
+                
+
                     Action::make('activities')
-                        ->label('View Activities')
+                        ->label('View Edit History')
                         ->url(fn ($record) => $record->deleted_at === null
                             ? static::getUrl('activities', ['record' => $record->id])
                             : '#') 
                         ->disabled(fn ($record) => $record->deleted_at !== null),
+
                 ])
                 
             ->bulkActions([
@@ -113,6 +120,7 @@ class ActivityLogResource extends Resource
             'create' => Pages\CreateActivityLog::route('/create'),
             'edit' => Pages\EditActivityLog::route('/{record}/edit'),
             'activities' => DocumentResource\Pages\ListDocumentActivities::route('/{record}/activities'), 
+            'viewlog' => DocumentViewLogResource\Pages\ListDocumentViewLogs::route('/{record}/viewlog'),
         ];
     }
 
