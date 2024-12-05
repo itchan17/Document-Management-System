@@ -18,6 +18,14 @@ class DeletedFolders extends BaseWidget
     {
         return $table
             ->query(Folder::query()->onlyTrashed())
+            ->paginated(function (){
+                
+                // dynamically display the pagination
+                return Folder::onlyTrashed()->exists();
+
+            })
+            ->defaultPaginationPageOption(5)
+            ->emptyStateHeading('No Deleted Folders')
             ->columns([
                 TextColumn::make('folder_name')
                     ->searchable(),

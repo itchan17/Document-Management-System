@@ -45,10 +45,12 @@ class DeletedFilesResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->heading('Deleted Documents')
-            ->recordUrl(null) 
             // this quesry will only display the documents that are deleted independently(not the documents inside deleted folder)
             ->query(Document::onlyTrashed()->where('deleted_through_folder', 0))
+            ->heading('Deleted Documents')
+            ->defaultPaginationPageOption(5)
+            ->emptyStateHeading('No Deleted Documents')
+            ->recordUrl(null) 
             ->columns([
                 TextColumn::make('title')
                     ->searchable(),

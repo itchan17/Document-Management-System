@@ -18,7 +18,7 @@ return new class extends Migration
             $table->timestamp('viewed_at')->useCurrent();
 
             // Foreign keys
-            $table->foreign('File')->references('id')->on('documents')->onDelete('cascade');
+            $table->foreign('document_id')->references('id')->on('documents')->onDelete('cascade');
             $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
