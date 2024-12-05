@@ -57,6 +57,7 @@ class AdminPanelProvider extends PanelProvider
                     ->timestampColumn() // activate last_password_renew_at column, updating it with each password renewal.
             )
     
+            ->databaseNotifications()
 
             ->authMiddleware([
                 Authenticate::class,

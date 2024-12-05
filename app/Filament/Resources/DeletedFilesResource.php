@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\DeletedFilesResource\Pages;
 use App\Filament\Resources\DeletedFilesResource\RelationManagers;
 use App\Models\Document;
+use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -16,7 +17,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Illuminate\Support\Facades\Storage;
 use Filament\Infolists\Components\Section;
-
+use Filament\Notifications\Notification;
+use Filament\Notifications\Events\DatabaseNotificationsSent;
 
 class DeletedFilesResource extends Resource
 {
@@ -68,6 +70,13 @@ class DeletedFilesResource extends Resource
             ->actions([
                 Tables\Actions\RestoreAction::make()
                     ->after(function (Document $record) {
+
+                        // code for sending database notification
+                        $prompt = "The document '" . $record->title . "' has been restored by " . auth()->user()->name . '.';
+                        $resource = new DeletedFilesResource();
+                        $resource->notifyUsers($prompt);
+                        
+
                         // Check if the file exists in the archive
                         if (Storage::disk('local')->exists($record->file_path)) {
                             // Define the original file path
@@ -88,6 +97,11 @@ class DeletedFilesResource extends Resource
 
                 Tables\Actions\ForceDeleteAction::make() 
                     ->after(function (Document $record) {
+
+                        // code for sending database notification
+                        $prompt = "The document '" . $record->title . "' has been deleted permanently by " . auth()->user()->name . '.';
+                        $resource = new DeletedFilesResource();
+                        $resource->notifyUsers($prompt);
                         
                         if (Storage::disk('local')->exists($record->file_path)) {
 
@@ -120,6 +134,21 @@ class DeletedFilesResource extends Resource
         return false;
     }
 
+    // Method that notify the users
+    public function notifyUsers(string $prompt): void
+    {
+        // Select all the super admin execpt the user that triggers the notification
+        $recipients = User::where('role', 'SUPER ADMIN')->where('id', '!=', auth()->id())->get();
+
+        foreach($recipients as $recipient){
+
+            Notification::make()
+                ->info()
+                ->title($prompt)
+                ->sendToDatabase($recipient);
+
+        }
+    }
 
 
 }
