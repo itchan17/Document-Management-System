@@ -5,6 +5,7 @@ namespace App\Filament\Resources\DeletedFilesResource\Pages;
 use App\Filament\Resources\DeletedFilesResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
+use App\Filament\Resources\DeletedFilesResource\Widgets;
 
 class ListDeletedFiles extends ListRecords
 {
@@ -14,6 +15,12 @@ class ListDeletedFiles extends ListRecords
     {
         return [
             Actions\CreateAction::make(),
+        ];
+    }
+
+    protected function getHeaderWidgets(): array {
+        return [
+            Widgets\DeletedFolders::class,
         ];
     }
 }

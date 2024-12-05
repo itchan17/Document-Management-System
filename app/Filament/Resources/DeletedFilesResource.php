@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Illuminate\Support\Facades\Storage;
+use Filament\Infolists\Components\Section;
 
 
 class DeletedFilesResource extends Resource
@@ -25,11 +26,13 @@ class DeletedFilesResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
-    protected static ?string $navigationLabel = 'Deleted Files';
+    protected static ?string $navigationLabel = 'Deleted Items';
 
-    protected static ?string $pluralLabel = 'Deleted Files';
+    protected static ?string $pluralLabel = 'Deleted Items';
 
     protected static ?string $navigationGroup = 'Trash';
+
+    protected ?string $subheading = 'This is the subheading.';
 
     public static function form(Form $form): Form
     {
@@ -42,46 +45,56 @@ class DeletedFilesResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->heading('Deleted Documents')
             ->recordUrl(null) 
+            // this quesry will only display the documents that are deleted independently(not the documents inside deleted folder)
+            ->query(Document::onlyTrashed()->where('deleted_through_folder', 0))
             ->columns([
                 TextColumn::make('title')
-                ->searchable(),
+                    ->searchable(),
 
-                TextColumn::make('file_type')
-                ->label('File Type')
-                ->searchable(),
+                TextColumn::make('deletedBy.name')
+                    ->label('Deleted By')
+                    ->searchable(),
 
-                TextColumn::make('created_at')
-                ->label('Created At')
-                ->date(),
+                TextColumn::make('deleted_at')
+                    ->label('Deleted At')
+                    ->dateTime('F j, Y, g:i a'),
             ])
 
-            ->filters([
-                TrashedFilter::make()
-                ->query(fn (Builder $query) => $query->onlyTrashed()), //filter para deleted lang kita
-        
+          
 
-            ])
             ->actions([
                 Tables\Actions\RestoreAction::make()
                     ->after(function (Document $record) {
                         // Check if the file exists in the archive
-                        if (Storage::disk('public')->exists('archive/' . basename($record->file_path))) {
+                        if (Storage::disk('local')->exists($record->file_path)) {
                             // Define the original file path
                             $originalPath = 'documents/' . basename($record->file_path);
-    
+                            
                             // Move the file back to the documents directory
-                            Storage::disk('public')->move('archive/' . basename($record->file_path), $originalPath);
+                            Storage::disk('local')->move($record->file_path, $originalPath);
+
+                            // save the new file path in database
+                            $record->file_path  = 'documents/' . basename($record->file_path);
                         }
+
+                        // update the value to null
+                        $record->deleted_through_folder = null;
+
+                        $record->save();
                     }),
 
-                Tables\Actions\ForceDeleteAction::make(),
-            ])
-            ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
-                ]),
+                Tables\Actions\ForceDeleteAction::make() 
+                    ->after(function (Document $record) {
+                        
+                        if (Storage::disk('local')->exists($record->file_path)) {
+
+                            // delete the file in the database
+                            Storage::disk('local')->delete($record->file_path);
+
+                        }
+                    }),
             ]);
     }
 

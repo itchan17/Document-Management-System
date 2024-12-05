@@ -204,6 +204,7 @@ class GetDocumentsRelationManager extends RelationManager
                     Select::make('folder')
                         ->label('Select Folder')  
                         ->options(Folder::all()->pluck('folder_name', 'id'))
+                        ->hiddenOn('create')
                         ->suffixIcon('heroicon-s-folder'),
                     TextArea::make('description')
                         ->label('Description')
@@ -294,7 +295,30 @@ class GetDocumentsRelationManager extends RelationManager
 
                     return $data;  // Return the data to be save in database
                 }),  
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\DeleteAction::make()
+                    ->after(function (Document $record) {
+
+                        // Check if the file exists
+                        if (Storage::disk('local')->exists($record->file_path)) {
+
+                            // Create the new file path with archive directory
+                            $newPath = 'archives'.'/'. basename($record->file_path);
+
+                            // Move the file to archive directory
+                            Storage::disk('local')->move($record->file_path, $newPath);
+                            
+                            // save the new file path in the database
+                            $record->file_path = 'archives'.'/'. basename($record->file_path);                         
+                        }
+
+                        //remove the relation to folder
+                        $record->folder = null;
+
+                        // To show in deleted files
+                        $record->deleted_through_folder = 0;
+
+                        $record->save();
+                    }), 
             ]);
     }
 

@@ -286,6 +286,7 @@ class DocumentResource extends Resource
                     ->color('gray'),               
                 Tables\Actions\DeleteAction::make()
                     ->after(function (Document $record) {
+
                         // Check if the file exists
                         if (Storage::disk('local')->exists($record->file_path)) {
 
@@ -294,7 +295,18 @@ class DocumentResource extends Resource
 
                             // Move the file to archive directory
                             Storage::disk('local')->move($record->file_path, $newPath);
+                            
+                            // save the new file path in the database
+                            $record->file_path = 'archives'.'/'. basename($record->file_path);                         
                          }
+
+                        //remove the relation to folder
+                        $record->folder = null;
+
+                        // To show in deleted files
+                        $record->deleted_through_folder = 0;
+
+                        $record->save();
                     }),               
             ])
             ->paginated([10, 20, 50, 100, 'all']);
