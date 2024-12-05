@@ -40,26 +40,23 @@ class UserResource extends Resource
             ])
             ->schema([
                 TextInput::make('name')
-                        ->label('Full Name')
+                        ->label('First Name')
+                        ->required()
+                        ->maxLength(255),
+
+                TextInput::make('lastname')
+                        ->label('Last Name')
                         ->required()
                         ->maxLength(255),
 
                 TextInput::make('email')
                         ->label('Email Address')
                         ->required()
+                        ->disabledOn('edit') 
                         ->email()
                         ->unique(ignoreRecord: true)
                         ->maxLength(255),
         
-                TextInput::make('password')
-                        ->label('Password')
-                        ->required()
-                        ->password()
-                        ->dehydrateStateUsing(fn ($state) => Hash::make($state))
-                        ->dehydrated(fn ($state) => filled($state))
-                        ->required(fn (string $context): bool => $context === 'create')               
-                        ->maxLength(255),
-
                 Select::make('role')
                         ->options(User::ROLES)
                         ->required(),
@@ -73,6 +70,11 @@ class UserResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
+                ->label('First Name')
+                ->searchable(),
+
+                TextColumn::make('lastname')
+                ->label('Last Name')
                 ->searchable(),
 
                 TextColumn::make('email')
@@ -102,6 +104,8 @@ class UserResource extends Resource
                 ]),
             ]);
     }
+
+    
 
     public static function getRelations(): array
     {

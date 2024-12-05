@@ -57,12 +57,11 @@ class DeletedFilesResource extends Resource
                     ->label('Deleted By')
                     ->searchable(),
 
+
                 TextColumn::make('deleted_at')
                     ->label('Deleted At')
                     ->dateTime('F j, Y, g:i a'),
             ])
-
-          
 
             ->actions([
                 Tables\Actions\RestoreAction::make()

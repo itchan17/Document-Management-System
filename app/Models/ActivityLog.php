@@ -21,6 +21,12 @@ class ActivityLog extends Model
     {
         return $this->belongsTo(User::class, 'causer_id');
     }
+
+    public function folder()
+    {
+        return $this->belongsTo(Folder::class); 
+    }
+
     
     // To access document's title in the Document table using subject_id foreign key
     public function document()

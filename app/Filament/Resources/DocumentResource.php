@@ -46,6 +46,8 @@ use Filament\Actions\StaticAction;
 use Filament\Tables\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
 use Exception;
+use App\Models\DocumentViewLog;
+use Illuminate\Support\Facades\DB;
 
 class DocumentResource extends Resource
 {
@@ -262,24 +264,38 @@ class DocumentResource extends Resource
             ->searchable()
             ->defaultSort('created_at', 'desc')
             ->actions([
-                Action::make('viewFile') //view function
-                    ->label('View')
-                    ->color('gray')
-                    ->icon('heroicon-s-eye') 
-                    ->url(fn (Document $record): string => 
-                        Storage::disk('local')->exists($record->file_path)
-                            ? route('documents.view', $record->id)
-                            : ''
-                    )
-                    ->openUrlInNewTab()
-                    ->after(function (Document $record) { //notification if file does not exist 
-                        if (!Storage::disk('local')->exists($record->file_path)) {
-                            Notification::make()
-                                ->title('File not found')
-                                ->danger()
-                                ->send(); 
-                        }
-                    }),
+                Action::make('viewFile') // view function
+                ->label('View')
+                ->color('gray')
+                ->icon('heroicon-s-eye')
+                ->url(fn (Document $record): string => '')
+                ->before(function (Document $record) {
+                    // Log the document view action 
+                    if (auth()->check()) {
+                        DocumentViewLog::create([
+                            'document_id' => $record->id,
+                            'user_id' => auth()->id(),
+                            'viewed_at' => now(),
+                        ]);
+                    }
+                })
+                ->requiresConfirmation()
+                ->modalIcon('heroicon-s-eye')
+                ->modalHeading('Confirm')
+                ->modalDescription('This document contains confidential information. Are you sure you want to view this document?')
+                ->modalSubmitActionLabel('View')
+                ->action(function (Document $record) {
+                    
+                    if (Storage::disk('local')->exists($record->file_path)) {
+                        return redirect()->route('documents.view', $record->id);
+                    } else {
+                        // Handle the case where the file does not exist
+                        Notification::make()
+                            ->title('File not found')
+                            ->danger()
+                            ->send();
+                    }
+                }),
                 
 
                 Tables\Actions\EditAction::make()
