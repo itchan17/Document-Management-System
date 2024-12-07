@@ -11,6 +11,11 @@ use App\Models\Folder;
 use Carbon\Carbon;
 use App\Filament\Pages\CreateDocument;
 use Illuminate\Support\Facades\Storage;
+use Exception;
+use Filament\Notifications\Notification;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\QueryException;
 
 class EditDocument extends EditRecord
 {
@@ -19,7 +24,7 @@ class EditDocument extends EditRecord
     // Convert pdf to text if ever file has been changed
     protected function mutateFormDataBeforeSave(array $data): array
     {    
-
+        
         //Instantiate CreateDocument
         $createDocument = new CreateDocument();
 
@@ -52,12 +57,46 @@ class EditDocument extends EditRecord
         
         // Add date and time if new document is added in the folder
         $createDocument->updateDateModified($data['folder']);
+        
+            return $data;  // Return the data to be save in database
 
-        return $data;  // Return the data to be save in database
+      
     }
-
-    protected function getRedirectUrl(): string
+    
+    // check for long file content
+    protected function handleRecordUpdate(Model $record, array $data): Model
     {
-        return $this->getResource()::getUrl('index');
+        $origRecord = $record;
+        
+        try {
+
+            $record->update($data);
+     
+            return $record;
+
+        } catch (QueryException $e) {
+            // Delete the uploaded file if there's an error
+            if (Storage::exists($data['file_path'])) {
+
+                Storage::delete($data['file_path']);
+            }
+        
+            // Clear the file input in the form (if applicable)
+            $this->data['file_path'] = null;
+
+            dd($this);
+            Notification::make()
+                ->danger()
+                ->title('File content is too long!')
+                ->send();
+
+            $this->halt();
+        }
     }
+
+
+    // protected function getRedirectUrl(): string
+    // {
+    //     return $this->getResource()::getUrl('index');
+    // }
 }
