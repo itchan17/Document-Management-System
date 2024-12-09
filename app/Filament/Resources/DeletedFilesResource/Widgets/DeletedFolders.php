@@ -30,14 +30,16 @@ class DeletedFolders extends BaseWidget
             ->emptyStateHeading('No Deleted Folders')
             ->columns([
                 TextColumn::make('folder_name')
+                    ->icon('heroicon-s-folder')
                     ->searchable(),
 
                 TextColumn::make('deletedBy.name')
-                    ->label('Deleted By')
+                    ->label('Deleted by')
                     ->searchable(),
 
                 TextColumn::make('deleted_at')
-                    ->label('Deleted At')
+                    ->sortable()
+                    ->label('Deleted at')
                     ->dateTime('F j, Y, g:i a'),
             ])
 

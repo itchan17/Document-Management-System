@@ -84,7 +84,6 @@ class EditDocument extends EditRecord
             // Clear the file input in the form (if applicable)
             $this->data['file_path'] = null;
 
-            dd($this);
             Notification::make()
                 ->danger()
                 ->title('File content is too long!')

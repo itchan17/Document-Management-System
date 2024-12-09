@@ -57,16 +57,18 @@ class ActivityLogResource extends Resource
                 TextColumn::make('title')
                 ->searchable(),
 
-                TextColumn::make('getFolder.folder_name')
-                ->label('File Name')
+                TextColumn::make('file_name')
+                ->label('File name')
                 ->searchable(),
 
                 TextColumn::make('created_at')
-                ->label('Created At')
+                ->label('Created at')
+                ->sortable()
                 ->date(),
 
                 TextColumn::make('updated_at')
-                ->label('Updated At')
+                ->label('Updated at')
+                ->sortable()
                 ->date(),
 
                 TextColumn::make('deleted_at') 

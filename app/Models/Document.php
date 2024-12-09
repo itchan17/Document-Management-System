@@ -7,6 +7,7 @@ use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Activitylog\LogOptions;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Laravel\Scout\Searchable;
+use Spatie\Activitylog\Models\Activity;
 
 class Document extends Model
 {
@@ -76,9 +77,25 @@ class Document extends Model
     {
         return LogOptions::defaults()
             ->useLogName('document') // Custom Name
-            ->setDescriptionForEvent(fn(string $eventName) => "Document has been {$eventName}.") // Custom description
+            ->setDescriptionForEvent(fn(string $eventName) => "{$this->file_name} has been {$eventName}.") // Custom description
             ->logOnly(['title', 'file_name', 'file_date', 'file_type',  'description' ]) // Showing the Activities
-            ->logOnlyDirty(); // Show only the changed attributes (EDIT)
-      
+            ->logOnlyDirty() // Show only the changed attributes (EDIT)
+            ->dontSubmitEmptyLogs();
+    }
+
+    // Log the original title and file_name
+    public function tapActivity(Activity $activity)
+    {
+        // check if the original array is null, if null which means the operation is create
+        if(!$this->getOriginal()){
+            $activity->subject_title = $this->getAttributes()['title'];
+            $activity->subject_file_name = $this->getAttributes()['file_name'];
+        }
+        // if not null the operation is update
+        elseif($this->getOriginal()){
+            $activity->subject_title = $this->getOriginal()['title'];
+            $activity->subject_file_name = $this->getOriginal()['file_name'];
+        }
+        
     }
 }
