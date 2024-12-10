@@ -34,6 +34,8 @@ use Carbon\Carbon;
 use App\Filament\Pages\CreateDocument;
 use Exception;
 use Illuminate\Support\Facades\Storage;
+use Filament\Tables\Actions\Action;
+use App\Models\DocumentViewLog;
 
 class GetDocumentsRelationManager extends RelationManager
 {
@@ -285,6 +287,39 @@ class GetDocumentsRelationManager extends RelationManager
                     }),
             ])
             ->actions([
+                Action::make('viewFile') // view function
+                ->label('View')
+                ->color('gray')
+                ->icon('heroicon-s-eye')
+                ->url(fn (Document $record): string => '')
+                ->before(function (Document $record) {
+                    // Log the document view action 
+                    if (auth()->check()) {
+                        DocumentViewLog::create([
+                            'document_id' => $record->id,
+                            'user_id' => auth()->id(),
+                            'viewed_at' => now(),
+                        ]);
+                    }
+                })
+                ->requiresConfirmation()
+                ->modalIcon('heroicon-s-eye')
+                ->modalHeading('Confirm')
+                ->modalDescription('This document contains confidential information. Are you sure you want to view this document?')
+                ->modalSubmitActionLabel('View')
+                ->action(function (Document $record) {
+                    
+                    if (Storage::disk('local')->exists($record->file_path)) {
+                        return redirect()->route('documents.view', $record->id);
+                    } else {
+                        // Handle the case where the file does not exist
+                        Notification::make()
+                            ->title('File not found')
+                            ->danger()
+                            ->send();
+                    }
+                }),
+
                 Tables\Actions\EditAction::make()  
                 ->mutateFormDataUsing(function (array $data, $livewire): array {
 

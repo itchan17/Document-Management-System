@@ -58,7 +58,7 @@ class ActivityLogResource extends Resource
                 ->searchable(),
 
                 TextColumn::make('getFolder.folder_name')
-                ->label('File Name')
+                ->label('Folder Name')
                 ->searchable(),
 
                 TextColumn::make('created_at')
@@ -86,12 +86,14 @@ class ActivityLogResource extends Resource
             ->actions([
 
                     Action::make('viewlog')
-                        ->label('View History')
-                        ->url(fn ($record) => static::getUrl('viewlog', ['record' => $record->id])),
+                        ->label('Access History')
+                        ->url(fn ($record) => static::getUrl('viewlog', ['record' => $record->id]))
+                        ->extraAttributes(['style' => 'margin-right: 30px;']),
+                        
                 
 
                     Action::make('activities')
-                        ->label('View Edit History')
+                        ->label('Activity History')
                         ->url(fn ($record) => $record->deleted_at === null
                             ? static::getUrl('activities', ['record' => $record->id])
                             : '#') 

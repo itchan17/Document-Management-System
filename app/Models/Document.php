@@ -53,6 +53,8 @@ class Document extends Model
         return $this->belongsTo(User::class, 'deleted_by');
     }
     
+    
+    
  
 
     protected static function booted()
@@ -68,7 +70,7 @@ class Document extends Model
     protected static $logAttributes = ['title', 'file_name', 'file_path', 'file_date', 'file_type',  'description' ];
 
     protected static $logName = 'document';
-
+    
     protected static $logOnlyDirty = true;
 
     // Customize the activity log options
@@ -77,8 +79,9 @@ class Document extends Model
         return LogOptions::defaults()
             ->useLogName('document') // Custom Name
             ->setDescriptionForEvent(fn(string $eventName) => "Document has been {$eventName}.") // Custom description
-            ->logOnly(['title', 'file_name', 'file_date', 'file_type',  'description' ]) // Showing the Activities
-            ->logOnlyDirty(); // Show only the changed attributes (EDIT)
+            ->logOnly(['title', 'file_name', 'file_date', 'file_type', 'description' ]) // Showing the Activities
+            ->logOnlyDirty() // Show only the changed attributes 
+            ->dontSubmitEmptyLogs();
       
     }
 }

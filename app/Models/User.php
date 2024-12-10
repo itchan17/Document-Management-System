@@ -25,7 +25,7 @@ class User extends Authenticatable implements RenewPasswordContract
     const ROLE_ADMIN = 'ADMIN';
 
     const ROLES = [
-        self::ROLE_SUPER_ADMIN => 'Super_Admin',
+        self::ROLE_SUPER_ADMIN => 'Super Admin',
         self::ROLE_ADMIN => 'Admin',
     ];
 
