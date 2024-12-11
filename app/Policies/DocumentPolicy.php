@@ -37,7 +37,7 @@ class DocumentPolicy
      */
     public function update(User $user, Document $document): bool
     {
-        return $user->isSuperAdmin() || $user->isAdmin();
+        return $user->isSuperAdmin();
     }
 
     /**

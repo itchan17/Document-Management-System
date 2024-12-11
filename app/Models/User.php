@@ -8,14 +8,16 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
+use Yebor974\Filament\RenewPassword\Contracts\RenewPasswordContract;
+use Yebor974\Filament\RenewPassword\Traits\RenewPassword;
 
 
 
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements RenewPasswordContract
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, RenewPassword;
 
 
 
@@ -23,7 +25,7 @@ class User extends Authenticatable implements FilamentUser
     const ROLE_ADMIN = 'ADMIN';
 
     const ROLES = [
-        self::ROLE_SUPER_ADMIN => 'Super_Admin',
+        self::ROLE_SUPER_ADMIN => 'Super Admin',
         self::ROLE_ADMIN => 'Admin',
     ];
 
@@ -50,9 +52,11 @@ class User extends Authenticatable implements FilamentUser
      */
     protected $fillable = [
         'name',
+        'lastname',
         'role',
         'email',
         'password',
+        'force_renew_password',
     ];
 
     /**

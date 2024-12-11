@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\TextInput;
+use Illuminate\Support\Facades\Storage;
 
 class FolderResource extends Resource
 {
@@ -57,7 +58,44 @@ class FolderResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                
+                Tables\Actions\DeleteAction::make() 
+                    ->after(function (Folder $folder) {
+                     
+                        if (auth()->check()) {
+
+                            $folder->deleted_by = auth()->id(); // Get user that deleted the folder
+            
+                            $folder->save();
+            
+                            // apply softdelete to each child
+                            $folder->documents()->each(function ($document) {
+
+                                if (is_null($document->deleted_through_folder)) {
+                                   
+                                    // Check if the file exists
+                                    if (Storage::disk('local')->exists($document->file_path)) {
+
+                                        // Create the new file path with archive directory
+                                        $newPath = 'archives'.'/'. basename($document->file_path);
+
+                                        // Move the file to archive directory
+                                        Storage::disk('local')->move($document->file_path, $newPath);
+                                        
+                                        // save the new file path in the database
+                                        $document->file_path = 'archives'.'/'. basename($document->file_path);                         
+                                    }
+            
+                                    // document inside will be hidden in the deleted files to recover the files you need to restore the folder
+                                    $document->deleted_through_folder = 1;
+            
+                                    $document->delete();
+                                }
+                               
+                                
+                            });
+                        }
+                    }),
             ]);
     }
 

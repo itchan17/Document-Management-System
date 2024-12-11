@@ -6,7 +6,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Tables\Columns\TextColumn;
-use App\Models\ActivityLog;
+use Spatie\Activitylog\Models\Activity;
 
 class RecentlyAdded extends BaseWidget
 {  
@@ -19,17 +19,16 @@ class RecentlyAdded extends BaseWidget
         // dd(ActivityLog::query()->latest()->limit(3)->get());
         return $table
             ->query(
-                ActivityLog::query()
+                Activity::query()
                     ->where('event', 'created')
                     ->latest()
                     ->limit(3)
             )
             ->columns([
-                TextColumn::make('document.title')
-                    ->label('Title')
-                    ->formatStateUsing(fn ($state) => ucwords($state)),
-                TextColumn::make('document.file_name')
-                    ->label('File Name'),
+                TextColumn::make('subject_title')
+                    ->label('Title'),
+                TextColumn::make('subject_file_name')
+                    ->label('File name'),
             ])
             ->paginated(false); 
     }

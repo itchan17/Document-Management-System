@@ -9,6 +9,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
+        "barryvdh/laravel-dompdf": "^3.0",
         "filament/filament": "^3.2",
         "http-interop/http-factory-guzzle": "^1.2",
         "laravel/framework": "^11.9",
@@ -18,7 +19,8 @@
         "pxlrbt/filament-activity-log": "^1.1",
         "smalot/pdfparser": "^2.11",
         "spatie/laravel-permission": "^6.10",
-        "thiagoalessio/tesseract_ocr": "^2.13"
+        "thiagoalessio/tesseract_ocr": "^2.13",
+        "yebor974/filament-renew-password": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

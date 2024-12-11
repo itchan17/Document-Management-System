@@ -12,8 +12,8 @@
 <body class="overflow-hidden">
     <div class="absolute z-50 w-full shadow-lg md:shadow-none">
         <div class="flex justify-between mx-5 md:mx-7 xl:mx-10 my-3">
-            <img src="{{ asset('/images/src_logo.png') }}" alt="Logo" class="h-12 md:h-16 xl:h-20">
-            <img src="{{ asset('/images/engineering_logo.png') }}" alt="Logo" class="h-12  md:h-16  xl:h-20">
+            <img src="{{ asset('/images/src_logo.svg') }}" alt="Logo" class="h-12 md:h-16 xl:h-20">
+            <img src="{{ asset('/images/engineering_logo.svg') }}" alt="Logo" class="h-12  md:h-16  xl:h-20">
         </div>
     </div>
     <img class="absolute z-[-1] opacity-30 bottom-[-100px] md:hidden" src="{{ asset('/images/src-arch.png') }}"

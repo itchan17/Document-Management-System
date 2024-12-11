@@ -17,6 +17,8 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use Yebor974\Filament\RenewPassword\RenewPasswordPlugin;
+
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -32,6 +34,7 @@ class AdminPanelProvider extends PanelProvider
             ])    
             ->darkMode(false)     
             ->viteTheme('resources/css/filament/admin/theme.css')
+            ->favicon(asset('images/engineering_logo.svg'))
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
             ->pages([])
@@ -47,6 +50,15 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
+
+            ->plugin(
+                (new RenewPasswordPlugin())
+                    ->forceRenewPassword() // activate the force renewal process
+                    ->timestampColumn() // activate last_password_renew_at column, updating it with each password renewal.
+            )
+    
+            ->databaseNotifications()
+
             ->authMiddleware([
                 Authenticate::class,
             ]);
