@@ -70,11 +70,11 @@ class UserResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
-                ->label('First Name')
+                ->label('First name')
                 ->searchable(),
 
                 TextColumn::make('lastname')
-                ->label('Last Name')
+                ->label('Last name')
                 ->searchable(),
 
                 TextColumn::make('email')
@@ -84,11 +84,11 @@ class UserResource extends Resource
                 ->searchable(),
 
                 TextColumn::make('created_at')
-                ->label('Created At')
+                ->label('Created at')
                 ->date(),
 
                 TextColumn::make('updated_at')
-                ->label('Updated At')
+                ->label('Updated at')
                 ->date(),
 
             ])

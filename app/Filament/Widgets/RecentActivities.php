@@ -6,7 +6,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Tables\Columns\TextColumn;
-use App\Models\ActivityLog;
+use Spatie\Activitylog\Models\Activity;
+use App\Models\User;
 
 class RecentActivities extends BaseWidget
 {
@@ -17,21 +18,37 @@ class RecentActivities extends BaseWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(ActivityLog::query()->latest()->limit(5))
+            ->query(Activity::query()->latest()->limit(5))
             ->columns([
                 TextColumn::make('event')
                     ->label('Activity')
+                    ->color(fn($state) => $state == 'deleted' ? 'danger' : 
+                    ($state == 'created' ? 'success' :  
+                    ($state == 'updated' ? 'info' : 
+                    ($state == 'restored' ? 'warning' : ' '))))
                     ->formatStateUsing(fn ($state) => ucwords($state)),
 
-                TextColumn::make('document.title')
+                TextColumn::make('subject_title')
                 ->label('Document'),
 
                 TextColumn::make('created_at')
-                    ->label('Date and Time')
+                    ->label('Date and time')
                     ->dateTime('F j, Y, g:i a'),
     
-                TextColumn::make('user.name')
-                    ->label('User'),
+                TextColumn::make('causer_id')
+                    ->label('User')
+                    ->formatStateUsing(function ($state) {
+                        
+                        $user = User::where('id', $state)->first();
+
+                        if(!is_null($user)){
+                            return $user->name;
+                        }
+                        else{
+                            return 'N/A';
+                        }
+
+                    }),
             ])
             ->paginated(false); 
     }

@@ -9,6 +9,8 @@ use App\Models\Folder;
 use Filament\Tables\Columns\TextColumn;
 use App\Models\Document;
 use Illuminate\Support\Facades\Storage;
+use App\Filament\Resources\DeletedFilesResource;
+use App\Models\User;
 
 class DeletedFolders extends BaseWidget
 {
@@ -28,14 +30,16 @@ class DeletedFolders extends BaseWidget
             ->emptyStateHeading('No Deleted Folders')
             ->columns([
                 TextColumn::make('folder_name')
+                    ->icon('heroicon-s-folder')
                     ->searchable(),
 
                 TextColumn::make('deletedBy.name')
-                    ->label('Deleted By')
+                    ->label('Deleted by')
                     ->searchable(),
 
                 TextColumn::make('deleted_at')
-                    ->label('Deleted At')
+                    ->sortable()
+                    ->label('Deleted at')
                     ->dateTime('F j, Y, g:i a'),
             ])
 
@@ -43,7 +47,12 @@ class DeletedFolders extends BaseWidget
 
                 Tables\Actions\RestoreAction::make()
                     ->after(function (Folder $folder) {
-                      
+
+                        // code for sending database notification
+                        $prompt = "The folder '" . $folder->folder_name . "' has been restored by " . auth()->user()->name . '.';
+                        $resource = new DeletedFilesResource();
+                        $resource->notifyUsers($prompt);
+
                         $folder->documents()->withTrashed()->each(function ($document) {
                             // Restore the soft-deleted document if it was deleted
                             if ($document->trashed()) {
@@ -71,6 +80,12 @@ class DeletedFolders extends BaseWidget
 
                 Tables\Actions\ForceDeleteAction::make()
                     ->before(function (Folder $folder) {
+
+                        // code for sending database notification
+                        $prompt = "The folder '" . $folder->folder_name . "' has been deleted permanently by " . auth()->user()->name . '.';
+                        $resource = new DeletedFilesResource();
+                        $resource->notifyUsers($prompt);
+
                         $folder->documents()->withTrashed()->each(function ($document) {
 
                             if ($document->trashed()){

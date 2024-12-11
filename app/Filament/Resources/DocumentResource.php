@@ -49,6 +49,9 @@ use Exception;
 use App\Models\DocumentViewLog;
 use Illuminate\Support\Facades\DB;
 
+// Set the execution time to 5mins
+set_time_limit(300);
+
 class DocumentResource extends Resource
 {
     protected static ?string $model = Document::class;
@@ -183,14 +186,27 @@ class DocumentResource extends Resource
 
                                     if ($value) {  
                                         try{
+                                            $startTime = time();
+                                            
                                             $text = $parser->parseFile($value->getRealPath())->getText();
+
+                                            // check if pdf parser takes too long to extract content
+                                            if (time() - $startTime > 60) {
+                                                abort(504, 'Execution is taking too long; the file might be too large.');
+                                            }
+                                            
                                             if(empty($text)) {
                                                 $fail("The file '{$fileName}' contains no searchable text.");  
                                             }
                                         }   
-                                        catch(Exception $e){
-                                            $fail($e->getMessage());
-                                        }                                                                   
+                                        catch(\Exception $e){
+                                            if($e->getCode() == 0){
+                                                $fail($e->getMessage());  
+                                            }
+
+                                            $fail("An error occured, please try again.");  
+
+                                        }                                                                    
                                     }
                                 };
                             },
@@ -237,7 +253,9 @@ class DocumentResource extends Resource
                         ->columnSpan('full')
                         ->rows(3),
                                
-                ])->columnSpan('full'),
+                ])
+                ->columnSpan('full'),
+                
             ]);
     }
  
@@ -343,4 +361,5 @@ class DocumentResource extends Resource
             'edit' => Pages\EditDocument::route('/{record}/edit'),
         ];
     }
+    
 }

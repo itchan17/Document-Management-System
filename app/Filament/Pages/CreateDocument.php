@@ -33,6 +33,10 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Exception;
+use Illuminate\Database\QueryException;
+
+// Set the execution time to 5mins
+set_time_limit(300);
 
 class CreateDocument extends Page implements HasForms
 {
@@ -144,7 +148,8 @@ class CreateDocument extends Page implements HasForms
                         ->rules([
                             function () {
                                 return function (string $attribute, $value, Closure $fail) {
-                                    if ($value) {                                   
+                                    if ($value) {     
+
                                         // Get the original file name
                                         $fileName = $value->getClientOriginalName(); 
 
@@ -166,13 +171,26 @@ class CreateDocument extends Page implements HasForms
 
                                     if ($value) {  
                                         try{
+                                            $startTime = time();
+                                            
                                             $text = $parser->parseFile($value->getRealPath())->getText();
+
+                                            // check if pdf parser takes too long to extract content
+                                            if (time() - $startTime > 60) {
+                                                abort(504, 'Execution is taking too long; the file might be too large.');
+                                            }
+                                            
                                             if(empty($text)) {
                                                 $fail("The file '{$fileName}' contains no searchable text.");  
                                             }
                                         }   
-                                        catch(Exception $e){
-                                            $fail($e->getMessage());
+                                        catch(\Exception $e){
+                                            if($e->getCode() == 0){
+                                                $fail($e->getMessage());  
+                                            }
+
+                                            $fail("An error occured, please try again.");  
+
                                         }                                                                   
                                     }
                                 };
@@ -226,7 +244,11 @@ class CreateDocument extends Page implements HasForms
 
     public function create()
     {
+
+           
+
             $data = $this->form->getState();
+           
 
             // extract the file
             $data['file_content'] = ($this->extractContent($data));
@@ -258,27 +280,49 @@ class CreateDocument extends Page implements HasForms
             // Add date and time if new document is added in the folder
             $this->updateDateModified($data['folder_id']);
 
-            // Save the data to the database
-            Document::create([
-                'title' => $data['title'],
-                'file_name' => $data['file_name'], 
-                'folder' => $data['folder_id'],
-                'file_date' => $data['file_date'],
-                'file_path' => $data['file_path'], 
-                'description' => $data['description'], 
-                'file_content' => $data['file_content'], 
-                'file_type' => $data['file_type'], 
-                'user_id' => auth()->id(),
-            ]);
+          
 
-           
+            try{
 
-            Notification::make()
+                // Save the data to the database
+                Document::create([
+                    'title' => $data['title'],
+                    'file_name' => $data['file_name'], 
+                    'folder' => $data['folder_id'],
+                    'file_date' => $data['file_date'],
+                    'file_path' => $data['file_path'], 
+                    'description' => $data['description'], 
+                    'file_content' => $data['file_content'], 
+                    'file_type' => $data['file_type'], 
+                    'user_id' => auth()->id(),
+                ]);
+
+                Notification::make()
                 ->success()
                 ->title('Document saved!')
                 ->send();
 
-            $this->form->fill();
+                $this->form->fill();
+            }
+            catch(QueryException $e){ 
+
+                // Will check if the file content is too long
+
+                Notification::make()
+                ->danger()
+                ->title('File content is too long!')
+                ->send();
+
+                // Delete thefile in file system
+                if (Storage::disk('local')->exists($data['file_path'])) {
+
+                    // delete the file in the database
+                    Storage::disk('local')->delete($data['file_path']);
+
+                }
+                $this->data['file_path'] = null;
+              
+            }       
     }
 
     // Update the date_modified column of folders
@@ -338,7 +382,14 @@ class CreateDocument extends Page implements HasForms
             $filePath = $data['file_path'];
 
              // Extract the text
-            $file_content = $parser->parseFile(storage_path('app/private/' . $filePath))->getText(); 
+             try{
+
+                $file_content = $parser->parseFile(storage_path('app/private/' . $filePath))->getText(); 
+
+            } 
+            catch(\Throwable $e){
+                dd($e);
+            }
 
             return $file_content;
         }

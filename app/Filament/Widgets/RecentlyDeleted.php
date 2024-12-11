@@ -8,7 +8,7 @@ use Filament\Widgets\TableWidget as BaseWidget;
 use Filament\Tables\Columns\TextColumn;
 use App\Models\ActivityLog;
 use App\Models\Document;
-
+use Spatie\Activitylog\Models\Activity;
 
 class RecentlyDeleted extends BaseWidget
 {
@@ -19,18 +19,16 @@ class RecentlyDeleted extends BaseWidget
     {          
         return $table
             ->query(
-                ActivityLog::query()
-                    ->where('event', 'deleted')
-                    ->latest()
-                    ->limit(3)
-
+                Activity::where('event', 'deleted')
+                    ->latest()               
+                    ->limit(3)                                             
             )
             ->columns([
-                TextColumn::make('document.title')
-                    ->label('Title')
-                    ->formatStateUsing(fn ($state) => ucwords($state)),
-                TextColumn::make('document.file_name')
-                    ->label('File Name'),
+                TextColumn::make('subject_title')
+                    ->label('Title'),
+                TextColumn::make('subject_file_name')
+                    ->label('File name'),
+
             ])
             ->paginated(false); 
     }

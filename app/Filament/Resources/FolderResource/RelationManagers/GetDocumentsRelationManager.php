@@ -36,6 +36,15 @@ use Exception;
 use Illuminate\Support\Facades\Storage;
 use Filament\Tables\Actions\Action;
 use App\Models\DocumentViewLog;
+use Illuminate\Database\QueryException;
+use Illuminate\Validation\ValidationException;
+use Filament\Notifications\Notification;
+use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\DeleteAction;
+use Filament\Tables\Actions\CreateAction;
+
+// Set the execution time to 5mins
+set_time_limit(300);
 
 class GetDocumentsRelationManager extends RelationManager
 {
@@ -159,14 +168,27 @@ class GetDocumentsRelationManager extends RelationManager
 
                                     if ($value) {  
                                         try{
+                                            $startTime = time();
+                                            
                                             $text = $parser->parseFile($value->getRealPath())->getText();
+
+                                            // check if pdf parser takes too long to extract content
+                                            if (time() - $startTime > 60) {
+                                                abort(504, 'Execution is taking too long; the file might be too large.');
+                                            }
+                                            
                                             if(empty($text)) {
                                                 $fail("The file '{$fileName}' contains no searchable text.");  
                                             }
                                         }   
-                                        catch(Exception $e){
-                                            $fail($e->getMessage());
-                                        }                                                                   
+                                        catch(\Exception $e){
+                                            if($e->getCode() == 0){
+                                                $fail($e->getMessage());  
+                                            }
+
+                                            $fail("An error occured, please try again.");  
+
+                                        }                                                                
                                     }
                                 };
                             },
@@ -243,7 +265,7 @@ class GetDocumentsRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()
+                CreateAction::make()
                     ->createAnother(false)
                     ->mutateFormDataUsing(function (array $data, $livewire): array {
 
@@ -284,6 +306,42 @@ class GetDocumentsRelationManager extends RelationManager
                         $createDocument->updateDateModified($folderId);
 
                         return $data;  // Return the data to be save in database
+                    })
+                    ->using(function (CreateAction $action, array $data, string $model, $livewire): Model {
+
+                        
+
+                        try{
+
+                            // save the folder id
+                            $data['folder'] = $this->ownerRecord->id;
+                            
+                            // Save the data to the database
+                            return $model::create($data);
+                           
+                        }
+                        catch(QueryException $e){ 
+            
+                            // Will check if the file content is too long
+            
+                            Notification::make()
+                            ->danger()
+                            ->title('File content is too long!')
+                            ->send();
+            
+                            // Delete thefile in file system
+                            if (Storage::disk('local')->exists($data['file_path'])) {
+            
+                                // delete the file in the database
+                                Storage::disk('local')->delete($data['file_path']);
+            
+                            }
+
+                            $livewire->mountedTableActionsData[0]['file_path'] = null;
+
+                            $action->halt();
+                            
+                        }    
                     }),
             ])
             ->actions([
@@ -320,17 +378,69 @@ class GetDocumentsRelationManager extends RelationManager
                     }
                 }),
 
-                Tables\Actions\EditAction::make()  
-                ->mutateFormDataUsing(function (array $data, $livewire): array {
+                EditAction::make()  
+                    ->mutateFormDataUsing(function (array $data, $livewire): array {
 
-                    // Add date and time if new document is added in the folder
-                    $createDocument = new CreateDocument();
 
-                    $createDocument->updateDateModified($data['folder']);
+                        // Add date and time if new document is added in the folder
+                        $createDocument = new CreateDocument();
 
-                    return $data;  // Return the data to be save in database
-                }),  
-                Tables\Actions\DeleteAction::make()
+                        // extract the file
+                        $data['file_content'] = ($createDocument->extractContent($data));
+                            
+                        // check if file_path is an array which means it is multiple images
+                        // then run the method that compile those images in pdf
+                        if (is_array($data['file_path']) && count($data['file_path']) == 1 && $data['file_type'] == 'image'){
+                            
+                            $data['file_path'] = $data['file_path'][0];
+
+                            $data['file_name'] = $data['file_name'][$data['file_path']];
+
+                        }
+                        elseif (is_array($data['file_path']) && count($data['file_path']) > 1  && $data['file_type'] == 'image') {
+
+                            $file_path_arr = $data['file_path'];
+
+                            $newData = ($createDocument->convertImagesToPDF($data['file_path'], $data['title']));
+
+                            $data['file_path'] =  $newData['file_path'];
+                            $data['file_name'] =  $newData['file_name'];
+                            $data['file_type'] =  $newData['file_type'];
+
+                            foreach($file_path_arr as $path){
+                                Storage::disk('local')->delete($path);
+                            }
+                        } 
+
+                        return $data;  // Return the data to be save in database
+                    })
+                    ->using(function (EditAction $action, Model $record, array $data, $livewire): Model {
+
+                        try {
+
+                            $record->update($data);
+                           
+                            return $record;
+                
+                        } catch (QueryException $e) {
+                            // Delete the uploaded file if there's an error
+                            if (Storage::exists($data['file_path'])) {
+                
+                                Storage::delete($data['file_path']);
+                            }
+                        
+                            // Clear the file input in the form (if applicable)
+                            $livewire->mountedTableActionsData[0]['file_path'] = null;
+
+                            Notification::make()
+                                ->danger()
+                                ->title('File content is too long!')
+                                ->send();
+             
+                            $action->halt();
+                        }
+                    }),  
+                DeleteAction::make()
                     ->after(function (Document $record) {
 
                         // Check if the file exists
