@@ -35,8 +35,8 @@ use Illuminate\Support\Facades\Storage;
 use Exception;
 use Illuminate\Database\QueryException;
 
-// Set the execution time to 5mins
-set_time_limit(300);
+// Set the execution time to 10mins
+set_time_limit(600);
 
 class CreateDocument extends Page implements HasForms
 {
@@ -72,6 +72,7 @@ class CreateDocument extends Page implements HasForms
                     // Uploading images
                     FileUpload::make('file_path')
                         ->required()
+                        ->maxSize(12 * 1024)
                         ->label('Image') 
                         ->disk('local')
                         ->directory('documents')
@@ -137,6 +138,7 @@ class CreateDocument extends Page implements HasForms
                             'sm' => 1,
                             'md' => 2,                 
                         ])
+                        ->maxSize(12 * 1024)
                         ->required()
                         ->label('File')                 
                         ->disk('local')
@@ -174,20 +176,13 @@ class CreateDocument extends Page implements HasForms
                                             $startTime = time();
                                             
                                             $text = $parser->parseFile($value->getRealPath())->getText();
-
-                                            // check if pdf parser takes too long to extract content
-                                            if (time() - $startTime > 60) {
-                                                abort(504, 'Execution is taking too long; the file might be too large.');
-                                            }
                                             
+                                            // Check for extracted text
                                             if(empty($text)) {
                                                 $fail("The file '{$fileName}' contains no searchable text.");  
                                             }
                                         }   
                                         catch(\Exception $e){
-                                            if($e->getCode() == 0){
-                                                $fail($e->getMessage());  
-                                            }
 
                                             $fail("An error occured, please try again.");  
 

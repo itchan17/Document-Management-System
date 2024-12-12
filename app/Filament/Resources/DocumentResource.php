@@ -49,8 +49,8 @@ use Exception;
 use App\Models\DocumentViewLog;
 use Illuminate\Support\Facades\DB;
 
-// Set the execution time to 5mins
-set_time_limit(300);
+// Set the execution time to 10mins
+set_time_limit(600);
 
 class DocumentResource extends Resource
 {
@@ -81,6 +81,7 @@ class DocumentResource extends Resource
                     // Uploading images
                     FileUpload::make('file_path')
                         ->required()
+                        ->maxSize(12 * 1024)
                         ->visibility('private')
                         ->label('Image') 
                         ->disk('local')
@@ -153,6 +154,7 @@ class DocumentResource extends Resource
                             'sm' => 1,
                             'md' => 2,                 
                         ])
+                        ->maxSize(12 * 1024)
                         ->required()
                         ->label('File')                 
                         ->disk('local')
@@ -190,11 +192,7 @@ class DocumentResource extends Resource
                                             
                                             $text = $parser->parseFile($value->getRealPath())->getText();
 
-                                            // check if pdf parser takes too long to extract content
-                                            if (time() - $startTime > 60) {
-                                                abort(504, 'Execution is taking too long; the file might be too large.');
-                                            }
-                                            
+                                            // Check for extracted text
                                             if(empty($text)) {
                                                 $fail("The file '{$fileName}' contains no searchable text.");  
                                             }

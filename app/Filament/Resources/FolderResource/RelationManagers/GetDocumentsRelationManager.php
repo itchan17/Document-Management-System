@@ -43,8 +43,8 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\CreateAction;
 
-// Set the execution time to 5mins
-set_time_limit(300);
+// Set the execution time to 10mins
+set_time_limit(600);
 
 class GetDocumentsRelationManager extends RelationManager
 {
@@ -63,6 +63,7 @@ class GetDocumentsRelationManager extends RelationManager
                     // Uploading images
                     FileUpload::make('file_path')
                         ->required()
+                        ->maxSize(12 * 1024)
                         ->visibility('private')
                         ->label('Image') 
                         ->disk('local')
@@ -136,6 +137,7 @@ class GetDocumentsRelationManager extends RelationManager
                             'md' => 2,                 
                         ])
                         ->required()
+                        ->maxSize(12 * 1024)
                         ->label('File')                 
                         ->disk('local')
                         ->directory('documents')
@@ -172,19 +174,12 @@ class GetDocumentsRelationManager extends RelationManager
                                             
                                             $text = $parser->parseFile($value->getRealPath())->getText();
 
-                                            // check if pdf parser takes too long to extract content
-                                            if (time() - $startTime > 60) {
-                                                abort(504, 'Execution is taking too long; the file might be too large.');
-                                            }
-                                            
+                                            // Check for extracted text
                                             if(empty($text)) {
                                                 $fail("The file '{$fileName}' contains no searchable text.");  
                                             }
                                         }   
                                         catch(\Exception $e){
-                                            if($e->getCode() == 0){
-                                                $fail($e->getMessage());  
-                                            }
 
                                             $fail("An error occured, please try again.");  
 
