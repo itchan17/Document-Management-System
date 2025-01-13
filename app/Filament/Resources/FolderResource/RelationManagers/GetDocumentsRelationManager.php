@@ -298,6 +298,11 @@ class GetDocumentsRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->createAnother(false)
+                    ->successNotification(
+                        Notification::make()
+                              ->success()
+                              ->title('Document saved')
+                    )
                     ->mutateFormDataUsing(function (array $data, $livewire): array {
 
                         //Instantiate CreateDocument
@@ -336,20 +341,20 @@ class GetDocumentsRelationManager extends RelationManager
 
                         $createDocument->updateDateModified($folderId);
 
-                        return $data;  // Return the data to be save in database
+                        return $data;  // Return the data to be save in database 
                     })
-                    ->using(function (CreateAction $action, array $data, string $model, $livewire): Model {
-
-                        
-
+                    ->using(function (CreateAction $action, array $data, string $model, $livewire): Model {        
                         try{
 
                             // save the folder id
                             $data['folder'] = $this->ownerRecord->id;
-                            
+
+        
+
                             // Save the data to the database
                             return $model::create($data);
-                           
+
+                        
                         }
                         catch(QueryException $e){ 
             
@@ -357,7 +362,7 @@ class GetDocumentsRelationManager extends RelationManager
             
                             Notification::make()
                             ->danger()
-                            ->title('File content is too long!')
+                            ->title('File content is too long')
                             ->send();
             
                             // Delete thefile in file system
@@ -465,7 +470,7 @@ class GetDocumentsRelationManager extends RelationManager
 
                             Notification::make()
                                 ->danger()
-                                ->title('File content is too long!')
+                                ->title('File content is too long')
                                 ->send();
              
                             $action->halt();

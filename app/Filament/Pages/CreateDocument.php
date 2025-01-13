@@ -327,7 +327,7 @@ class CreateDocument extends Page implements HasForms
 
                 Notification::make()
                 ->success()
-                ->title('Document saved!')
+                ->title('Document saved')
                 ->send();
 
                 $this->form->fill();
@@ -338,7 +338,7 @@ class CreateDocument extends Page implements HasForms
 
                 Notification::make()
                 ->danger()
-                ->title('File content is too long!')
+                ->title('File content is too long')
                 ->send();
 
                 // Delete thefile in file system
