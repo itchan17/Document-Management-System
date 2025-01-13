@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources;
 
-
 use App\Filament\Resources\DocumentResource\Pages;
 use App\Filament\Resources\DocumentResource\RelationManagers;
 use App\Filament\Resources\DocumentResource\Pages\ListDocumentActivities;
@@ -48,9 +47,6 @@ use Illuminate\Database\Eloquent\Model;
 use Exception;
 use App\Models\DocumentViewLog;
 use Illuminate\Support\Facades\DB;
-
-// Set the execution time to 10mins
-set_time_limit(600);
 
 class DocumentResource extends Resource
 {
@@ -137,7 +133,7 @@ class DocumentResource extends Resource
                                     catch (Exception $e) {
 
                                         // send an error thath there's no text that can be extracted
-                                        $fail("The image '{$fileName}' contains no readable text.");
+                                        $fail("No readable text found in '{$fileName}'.");
 
                                     }                                                            
                                     
@@ -182,29 +178,65 @@ class DocumentResource extends Resource
                             },
                             function () {
                                 return function (string $attribute, $value, Closure $fail) {
-
-                                    $parser = New Parser();
                                     $fileName = $value->getClientOriginalName(); 
-
+                            
                                     if ($value) {  
-                                        try{
-                                            $startTime = time();
+                                        try {
+                                            $filePath = $value->getRealPath();
+                                                                                                            
+                                            // Second check: Try a basic PDF header check
+                                            $handle = fopen($filePath, 'rb');
+                                            if ($handle) {
+                                                $header = fread($handle, 4);
+                                                fclose($handle);
+                                                if ($header !== '%PDF') {
+                                                    $fail("The file '{$fileName}' appears to be corrupted.");
+                                                    return;
+                                                }
+                                            }
+
+                                            // Try parsing with PDFParser
+                                            try {
+                                                $parser = new Parser();
+                                                
+                                                // Use a different approach to extract text
+                                                $pdf = @$parser->parseFile($filePath);
+                                                
+                                                // If parsing succeeded, try to extract pages and text
+                                                if ($pdf) {
+                                                    $pages = $pdf->getPages();
+                                                    $text = '';
+                                                    
+                                                    // Extract text page by page
+                                                    foreach ($pages as $page) {
+                                                        try {
+                                                            $text .= $page->getText() . "\n";
+                                                        } catch (\Throwable $e) {
+                                                            continue; // Skip problematic pages
+                                                        }
+                                                    }
+                                                    
+                                                    if (empty(trim($text))) {
+                                                        $fail("No readable text found in '{$fileName}'.");
+                                                        return;
+                                                    }
+                                               
+                                                } else {
+                                                    $fail("Unable to parse '{$fileName}'. The file might be corrupted or encrypted.");
+                                                    return;
+                                                }
+                                                
+                                            } catch (\Exception $e) {
+                                                \Log::error("PDF Parse Error for {$fileName}: " . $e->getMessage());
+                                                $fail("Unable to process '{$fileName}'. Please ensure it's a valid PDF document.");
+                                                return;
+                                            }
                                             
-                                            $text = $parser->parseFile($value->getRealPath())->getText();
-
-                                            // Check for extracted text
-                                            if(empty($text)) {
-                                                $fail("The file '{$fileName}' contains no searchable text.");  
-                                            }
-                                        }   
-                                        catch(\Exception $e){
-                                            if($e->getCode() == 0){
-                                                $fail($e->getMessage());  
-                                            }
-
-                                            $fail("An error occured, please try again.");  
-
-                                        }                                                                    
+                                        } catch (\Exception $e) {
+                                            \Log::error("File Processing Error: " . $e->getMessage());
+                                            $fail("An error occurred while processing the file. Please try again.");
+                                            return;
+                                        }
                                     }
                                 };
                             },
