@@ -51,7 +51,7 @@ class ActivityLogResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->recordUrl(null) 
+            
             ->query(Document::query()->withTrashed()) //show deleted files also
             ->columns([
                 TextColumn::make('title')
@@ -75,7 +75,7 @@ class ActivityLogResource extends Resource
                 ->label('Status')
                 ->default('Active') 
                 ->formatStateUsing(fn ($record) => $record->deleted_at !== null 
-                    ? 'Deleted by ' . ($record->deletedBy ? $record->deletedBy->name . ' ' . $record->deletedBy->lastname : 'Unknown')
+                    ? 'Deleted by ' . ($record->deletedBy ? $record->deletedBy->name . ' ' . $record->deletedBy->lastname : 'Deleted User')
                     : 'Active')
                 ->color(fn ($record) => $record->deleted_at !== null ? 'danger' : 'success')
                 ->searchable(false)

@@ -58,9 +58,10 @@ class DeletedFilesResource extends Resource
                     ->icon('heroicon-s-document')
                     ->searchable(),
 
-                TextColumn::make('deletedBy.name')
+                    TextColumn::make('deletedBy.name')
                     ->label('Deleted by')
-                    ->searchable(),
+                    ->searchable()
+                    ->default('Deleted User'),
 
 
                 TextColumn::make('deleted_at')

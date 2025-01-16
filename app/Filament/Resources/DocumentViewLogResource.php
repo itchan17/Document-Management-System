@@ -47,6 +47,7 @@ class DocumentViewLogResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+        ->recordUrl(null) 
             ->columns([
 
                 TextColumn::make('user.name')
