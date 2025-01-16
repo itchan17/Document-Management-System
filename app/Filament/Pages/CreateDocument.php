@@ -35,9 +35,6 @@ use Illuminate\Support\Facades\Storage;
 use Exception;
 use Illuminate\Database\QueryException;
 
-// Set the execution time to 5mins
-set_time_limit(300);
-
 class CreateDocument extends Page implements HasForms
 {
     use InteractsWithForms;
@@ -72,6 +69,7 @@ class CreateDocument extends Page implements HasForms
                     // Uploading images
                     FileUpload::make('file_path')
                         ->required()
+                        ->maxSize(12 * 1024)
                         ->label('Image') 
                         ->disk('local')
                         ->directory('documents')
@@ -120,7 +118,7 @@ class CreateDocument extends Page implements HasForms
                                     catch (Exception $e) {
 
                                         // send an error thath there's no text that can be extracted
-                                        $fail("The image '{$fileName}' contains no readable text.");
+                                        $fail("No readable text found in '{$fileName}'.");
 
                                     }                                                            
                                     
@@ -137,6 +135,7 @@ class CreateDocument extends Page implements HasForms
                             'sm' => 1,
                             'md' => 2,                 
                         ])
+                        ->maxSize(12 * 1024)
                         ->required()
                         ->label('File')                 
                         ->disk('local')
@@ -165,33 +164,65 @@ class CreateDocument extends Page implements HasForms
                             },
                             function () {
                                 return function (string $attribute, $value, Closure $fail) {
-
-                                    $parser = New Parser();
                                     $fileName = $value->getClientOriginalName(); 
-
+                            
                                     if ($value) {  
-                                        try{
-                                            $startTime = time();
-                                            
-                                            $text = $parser->parseFile($value->getRealPath())->getText();
+                                        try {
+                                            $filePath = $value->getRealPath();
+                                                                                                            
+                                            // Second check: Try a basic PDF header check
+                                            $handle = fopen($filePath, 'rb');
+                                            if ($handle) {
+                                                $header = fread($handle, 4);
+                                                fclose($handle);
+                                                if ($header !== '%PDF') {
+                                                    $fail("The file '{$fileName}' appears to be corrupted.");
+                                                    return;
+                                                }
+                                            }
 
-                                            // check if pdf parser takes too long to extract content
-                                            if (time() - $startTime > 60) {
-                                                abort(504, 'Execution is taking too long; the file might be too large.');
+                                            // Try parsing with PDFParser
+                                            try {
+                                                $parser = new Parser();
+                                                
+                                                // Use a different approach to extract text
+                                                $pdf = @$parser->parseFile($filePath);
+                                                
+                                                // If parsing succeeded, try to extract pages and text
+                                                if ($pdf) {
+                                                    $pages = $pdf->getPages();
+                                                    $text = '';
+                                                    
+                                                    // Extract text page by page
+                                                    foreach ($pages as $page) {
+                                                        try {
+                                                            $text .= $page->getText() . "\n";
+                                                        } catch (\Throwable $e) {
+                                                            continue; // Skip problematic pages
+                                                        }
+                                                    }
+                                                    
+                                                    if (empty(trim($text))) {
+                                                        $fail("No readable text found in '{$fileName}'.");
+                                                        return;
+                                                    }
+                                               
+                                                } else {
+                                                    $fail("Unable to parse '{$fileName}'. The file might be corrupted or encrypted.");
+                                                    return;
+                                                }
+                                                
+                                            } catch (\Exception $e) {
+                                                \Log::error("PDF Parse Error for {$fileName}: " . $e->getMessage());
+                                                $fail("Unable to process '{$fileName}'. Please ensure it's a valid PDF document.");
+                                                return;
                                             }
                                             
-                                            if(empty($text)) {
-                                                $fail("The file '{$fileName}' contains no searchable text.");  
-                                            }
-                                        }   
-                                        catch(\Exception $e){
-                                            if($e->getCode() == 0){
-                                                $fail($e->getMessage());  
-                                            }
-
-                                            $fail("An error occured, please try again.");  
-
-                                        }                                                                   
+                                        } catch (\Exception $e) {
+                                            \Log::error("File Processing Error: " . $e->getMessage());
+                                            $fail("An error occurred while processing the file. Please try again.");
+                                            return;
+                                        }
                                     }
                                 };
                             },
@@ -244,9 +275,6 @@ class CreateDocument extends Page implements HasForms
 
     public function create()
     {
-
-           
-
             $data = $this->form->getState();
            
 
@@ -299,7 +327,7 @@ class CreateDocument extends Page implements HasForms
 
                 Notification::make()
                 ->success()
-                ->title('Document saved!')
+                ->title('Document saved')
                 ->send();
 
                 $this->form->fill();
@@ -310,7 +338,7 @@ class CreateDocument extends Page implements HasForms
 
                 Notification::make()
                 ->danger()
-                ->title('File content is too long!')
+                ->title('File content is too long')
                 ->send();
 
                 // Delete thefile in file system
@@ -377,22 +405,41 @@ class CreateDocument extends Page implements HasForms
         }   
 
         // extract content for pdf
-        elseif(!is_array($data['file_path']) && $data['file_type'] == 'pdf') {
+        elseif (!is_array($data['file_path']) && $data['file_type'] == 'pdf') {
 
-            $filePath = $data['file_path'];
-
-             // Extract the text
-             try{
-
-                $file_content = $parser->parseFile(storage_path('app/private/' . $filePath))->getText(); 
-
-            } 
-            catch(\Throwable $e){
-                dd($e);
+            $filePath = storage_path('app/private/' . $data['file_path']);
+            $file_content = ''; // Default value to ensure a string is returned
+        
+            try {
+                $parser = new Parser();
+        
+                // Parse the PDF file
+                $pdf = $parser->parseFile($filePath);
+        
+                // If parsing succeeded, try to extract pages and text
+                if ($pdf) {
+                    $pages = $pdf->getPages();
+        
+                    // Extract text page by page
+                    foreach ($pages as $page) {
+                        try {
+                            $file_content .= $page->getText() . "\n";
+                        } catch (\Throwable $e) {
+                            // Log error for problematic pages and continue
+                            \Log::error("Error extracting text from a page: " . $e->getMessage());
+                            continue;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                \Log::error("PDF Parse Error for {$filePath}: " . $e->getMessage());
+                dd($e); // Optional debug output
             }
-
+   
             return $file_content;
         }
+        
+        
     }
 
     public function convertImagesToPDF(array $image_paths, string $title): array

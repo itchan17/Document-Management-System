@@ -86,7 +86,7 @@ class EditDocument extends EditRecord
 
             Notification::make()
                 ->danger()
-                ->title('File content is too long!')
+                ->title('File content is too long')
                 ->send();
 
             $this->halt();

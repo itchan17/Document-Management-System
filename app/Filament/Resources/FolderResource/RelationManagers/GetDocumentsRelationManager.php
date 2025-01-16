@@ -43,9 +43,6 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\CreateAction;
 
-// Set the execution time to 5mins
-set_time_limit(300);
-
 class GetDocumentsRelationManager extends RelationManager
 {
     protected static string $relationship = 'documents';
@@ -63,6 +60,7 @@ class GetDocumentsRelationManager extends RelationManager
                     // Uploading images
                     FileUpload::make('file_path')
                         ->required()
+                        ->maxSize(12 * 1024)
                         ->visibility('private')
                         ->label('Image') 
                         ->disk('local')
@@ -118,7 +116,7 @@ class GetDocumentsRelationManager extends RelationManager
                                     catch (Exception $e) {
 
                                         // send an error thath there's no text that can be extracted
-                                        $fail("The image '{$fileName}' contains no readable text.");
+                                        $fail("No readable text found in '{$fileName}'.");
 
                                     }                                                            
                                     
@@ -136,6 +134,7 @@ class GetDocumentsRelationManager extends RelationManager
                             'md' => 2,                 
                         ])
                         ->required()
+                        ->maxSize(12 * 1024)
                         ->label('File')                 
                         ->disk('local')
                         ->directory('documents')
@@ -162,33 +161,65 @@ class GetDocumentsRelationManager extends RelationManager
                             },
                             function () {
                                 return function (string $attribute, $value, Closure $fail) {
-
-                                    $parser = New Parser();
                                     $fileName = $value->getClientOriginalName(); 
-
+                            
                                     if ($value) {  
-                                        try{
-                                            $startTime = time();
-                                            
-                                            $text = $parser->parseFile($value->getRealPath())->getText();
+                                        try {
+                                            $filePath = $value->getRealPath();
+                                                                                                            
+                                            // Second check: Try a basic PDF header check
+                                            $handle = fopen($filePath, 'rb');
+                                            if ($handle) {
+                                                $header = fread($handle, 4);
+                                                fclose($handle);
+                                                if ($header !== '%PDF') {
+                                                    $fail("The file '{$fileName}' appears to be corrupted.");
+                                                    return;
+                                                }
+                                            }
 
-                                            // check if pdf parser takes too long to extract content
-                                            if (time() - $startTime > 60) {
-                                                abort(504, 'Execution is taking too long; the file might be too large.');
+                                            // Try parsing with PDFParser
+                                            try {
+                                                $parser = new Parser();
+                                                
+                                                // Use a different approach to extract text
+                                                $pdf = @$parser->parseFile($filePath);
+                                                
+                                                // If parsing succeeded, try to extract pages and text
+                                                if ($pdf) {
+                                                    $pages = $pdf->getPages();
+                                                    $text = '';
+                                                    
+                                                    // Extract text page by page
+                                                    foreach ($pages as $page) {
+                                                        try {
+                                                            $text .= $page->getText() . "\n";
+                                                        } catch (\Throwable $e) {
+                                                            continue; // Skip problematic pages
+                                                        }
+                                                    }
+                                                    
+                                                    if (empty(trim($text))) {
+                                                        $fail("No readable text found in '{$fileName}'.");
+                                                        return;
+                                                    }
+                                               
+                                                } else {
+                                                    $fail("Unable to parse '{$fileName}'. The file might be corrupted or encrypted.");
+                                                    return;
+                                                }
+                                                
+                                            } catch (\Exception $e) {
+                                                \Log::error("PDF Parse Error for {$fileName}: " . $e->getMessage());
+                                                $fail("Unable to process '{$fileName}'. Please ensure it's a valid PDF document.");
+                                                return;
                                             }
                                             
-                                            if(empty($text)) {
-                                                $fail("The file '{$fileName}' contains no searchable text.");  
-                                            }
-                                        }   
-                                        catch(\Exception $e){
-                                            if($e->getCode() == 0){
-                                                $fail($e->getMessage());  
-                                            }
-
-                                            $fail("An error occured, please try again.");  
-
-                                        }                                                                
+                                        } catch (\Exception $e) {
+                                            \Log::error("File Processing Error: " . $e->getMessage());
+                                            $fail("An error occurred while processing the file. Please try again.");
+                                            return;
+                                        }
                                     }
                                 };
                             },
@@ -267,6 +298,11 @@ class GetDocumentsRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->createAnother(false)
+                    ->successNotification(
+                        Notification::make()
+                              ->success()
+                              ->title('Document saved')
+                    )
                     ->mutateFormDataUsing(function (array $data, $livewire): array {
 
                         //Instantiate CreateDocument
@@ -305,20 +341,20 @@ class GetDocumentsRelationManager extends RelationManager
 
                         $createDocument->updateDateModified($folderId);
 
-                        return $data;  // Return the data to be save in database
+                        return $data;  // Return the data to be save in database 
                     })
-                    ->using(function (CreateAction $action, array $data, string $model, $livewire): Model {
-
-                        
-
+                    ->using(function (CreateAction $action, array $data, string $model, $livewire): Model {        
                         try{
 
                             // save the folder id
                             $data['folder'] = $this->ownerRecord->id;
-                            
+
+        
+
                             // Save the data to the database
                             return $model::create($data);
-                           
+
+                        
                         }
                         catch(QueryException $e){ 
             
@@ -326,7 +362,7 @@ class GetDocumentsRelationManager extends RelationManager
             
                             Notification::make()
                             ->danger()
-                            ->title('File content is too long!')
+                            ->title('File content is too long')
                             ->send();
             
                             // Delete thefile in file system
@@ -434,7 +470,7 @@ class GetDocumentsRelationManager extends RelationManager
 
                             Notification::make()
                                 ->danger()
-                                ->title('File content is too long!')
+                                ->title('File content is too long')
                                 ->send();
              
                             $action->halt();
