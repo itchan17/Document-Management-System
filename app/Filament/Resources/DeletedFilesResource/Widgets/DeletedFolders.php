@@ -35,7 +35,8 @@ class DeletedFolders extends BaseWidget
 
                 TextColumn::make('deletedBy.name')
                     ->label('Deleted by')
-                    ->searchable(),
+                    ->searchable()
+                    ->default('Deleted User'),
 
                 TextColumn::make('deleted_at')
                     ->sortable()

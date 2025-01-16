@@ -45,7 +45,7 @@ class RecentActivities extends BaseWidget
                             return $user->name;
                         }
                         else{
-                            return 'N/A';
+                            return 'Deleted User';
                         }
 
                     }),
