@@ -51,7 +51,7 @@ class ActivityLogResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            
+            ->recordUrl(null) 
             ->query(Document::query()->withTrashed()) //show deleted files also
             ->columns([
                 TextColumn::make('title')

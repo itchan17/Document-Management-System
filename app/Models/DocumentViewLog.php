@@ -7,7 +7,6 @@ use Illuminate\Database\Eloquent\Model;
 
 
 class DocumentViewLog extends Model
-
 {
     use HasFactory;
 
