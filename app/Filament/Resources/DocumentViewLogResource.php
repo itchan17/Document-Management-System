@@ -60,6 +60,7 @@ class DocumentViewLogResource extends Resource
 
                 TextColumn::make('viewed_at')
                 ->label('Time and Date')
+                ->searchable()
                 ->dateTime('m/d/Y h:i A'),
             ])
             ->filters([
