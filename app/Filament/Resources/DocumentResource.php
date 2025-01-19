@@ -68,7 +68,7 @@ class DocumentResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Upload FIle')
+                Section::make('Upload File')
                 ->columns([
                     'sm' => 1,
                     'md' => 3,                 
@@ -297,13 +297,16 @@ class DocumentResource extends Resource
                 Stack::make([                  
                     TextColumn::make('title')
                         ->weight(FontWeight::Medium)
-                        ->size(TextColumn\TextColumnSize::Medium),       
+                        ->size(TextColumn\TextColumnSize::Medium),    
+                    TextColumn::make('created_at')
+                        ->size(TextColumn\TextColumnSize::Small)
+                        ->dateTime('F j, Y, g:i a'),   
                     TextColumn::make('file_name')
                         ->icon('heroicon-s-document')
                         ->iconColor('primary'),
                 ]),
                 View::make('documents.table.collapsible-row-content')
-                    ->collapsible(),     
+                    ->collapsible(),   
             ])
             ->contentGrid([
                 'md' => 1,

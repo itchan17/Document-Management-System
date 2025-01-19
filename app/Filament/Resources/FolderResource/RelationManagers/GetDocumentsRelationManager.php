@@ -51,7 +51,7 @@ class GetDocumentsRelationManager extends RelationManager
     {
         return $form
             ->schema([
-                Section::make('Upload FIle')
+                Section::make('Upload File')
                 ->columns([
                     'sm' => 1,
                     'md' => 3,                 
@@ -275,11 +275,15 @@ class GetDocumentsRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('title')
+            ->defaultSort('created_at', 'desc')
             ->columns([
                 Stack::make([                  
                     TextColumn::make('title')
                         ->weight(FontWeight::Medium)
-                        ->size(TextColumn\TextColumnSize::Medium),       
+                        ->size(TextColumn\TextColumnSize::Medium),   
+                    TextColumn::make('created_at')
+                        ->size(TextColumn\TextColumnSize::Small)
+                        ->dateTime('F j, Y, g:i a'),       
                     TextColumn::make('file_name')
                         ->icon('heroicon-s-document-text')
                         ->iconColor('primary'),
@@ -348,8 +352,6 @@ class GetDocumentsRelationManager extends RelationManager
 
                             // save the folder id
                             $data['folder'] = $this->ownerRecord->id;
-
-        
 
                             // Save the data to the database
                             return $model::create($data);

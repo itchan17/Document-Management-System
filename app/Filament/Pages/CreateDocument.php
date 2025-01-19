@@ -34,8 +34,9 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Exception;
 use Illuminate\Database\QueryException;
+use Filament\Actions\Contracts\HasActions;
 
-class CreateDocument extends Page implements HasForms
+class CreateDocument extends Page implements HasForms, HasActions
 {
     use InteractsWithForms;
 
@@ -60,7 +61,7 @@ class CreateDocument extends Page implements HasForms
     {
         return $form
             ->schema([
-                Section::make('Upload FIle')
+                Section::make('Upload File')
                 ->columns([
                     'sm' => 1,
                     'md' => 3,                 
@@ -273,11 +274,44 @@ class CreateDocument extends Page implements HasForms
             ])->statePath('data');
     }
 
+    public function createAction(): Action
+    {
+        return Action::make('create')
+            
+            ->label('Upload')
+            ->requiresConfirmation()
+            ->modalIcon('heroicon-o-information-circle')
+            ->modalHeading('Upload Document')
+            ->modalDescription('Are you sure you want to upload this document?')
+            ->modalSubmitActionLabel('Confirm')
+            ->modalCancelActionLabel('Cancel')
+            ->action(function () {
+                $this->closeActionModal();
+                $this->create();
+            });     
+    }
+
+    public function clearAction(): Action
+    {
+        return Action::make('clear')
+            
+            ->label('Clear') 
+            ->color('gray')
+            ->requiresConfirmation()
+            ->modalHeading('Clear Form')
+            ->modalDescription('Are you sure you want to clear this form?')
+            ->modalSubmitActionLabel('Confirm')
+            ->modalCancelActionLabel('Cancel')
+            ->action(function () {
+                $this->closeActionModal();
+                $this->clear();
+            });     
+    }
+   
     public function create()
     {
             $data = $this->form->getState();
            
-
             // extract the file
             $data['file_content'] = ($this->extractContent($data));
             
@@ -467,7 +501,6 @@ class CreateDocument extends Page implements HasForms
         ];
     }
 
-
     // Function for the clear button
     public function clear(): void
     {
@@ -475,7 +508,7 @@ class CreateDocument extends Page implements HasForms
 
         Notification::make()
         ->success()
-        ->title('Form Cleared!')
+        ->title('Form cleared!')
         ->send();
     }
 }

@@ -30,6 +30,8 @@ class DeletedFolders extends BaseWidget
             ->emptyStateHeading('No Deleted Folders')
             ->columns([
                 TextColumn::make('folder_name')
+                    ->words(10)
+                    ->wrap()
                     ->icon('heroicon-s-folder')
                     ->searchable(),
 
@@ -40,8 +42,16 @@ class DeletedFolders extends BaseWidget
 
                 TextColumn::make('deleted_at')
                     ->sortable()
-                    ->label('Deleted at')
-                    ->dateTime('F j, Y, g:i a'),
+                    ->label('Expires In')
+                    ->formatStateUsing(function ($state) {
+                        // Calculate the number of days left
+                        $deletionDate = \Carbon\Carbon::parse($state)->addDays(30);
+                        $now = \Carbon\Carbon::now();
+                        $daysLeft = abs(round($deletionDate->diffInDays($now)));
+
+                        return "{$daysLeft} " . ($daysLeft != 1 ? 'days' : 'day');
+
+                    }),
             ])
 
             ->actions([

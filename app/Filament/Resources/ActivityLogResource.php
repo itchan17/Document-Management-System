@@ -55,10 +55,12 @@ class ActivityLogResource extends Resource
             ->query(Document::query()->withTrashed()) //show deleted files also
             ->columns([
                 TextColumn::make('title')
+                ->wrap()
                 ->searchable(),
 
                 TextColumn::make('file_name')
                 ->label('File name')
+                ->wrap()
                 ->searchable(),
 
                 TextColumn::make('created_at')

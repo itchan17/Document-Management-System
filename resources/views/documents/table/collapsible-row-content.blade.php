@@ -15,7 +15,7 @@
             Description:
         </span>
 
-        <span>
+        <span  class="block break-words w-full">
             {{ $getRecord()->description ?? 'No description' }}
         </span>
     </div>

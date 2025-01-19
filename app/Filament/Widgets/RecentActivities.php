@@ -20,16 +20,10 @@ class RecentActivities extends BaseWidget
         return $table
             ->query(Activity::query()->latest()->limit(5))
             ->columns([
-                TextColumn::make('event')
-                    ->label('Activity')
-                    ->color(fn($state) => $state == 'deleted' ? 'danger' : 
-                    ($state == 'created' ? 'success' :  
-                    ($state == 'updated' ? 'info' : 
-                    ($state == 'restored' ? 'warning' : ' '))))
-                    ->formatStateUsing(fn ($state) => ucwords($state)),
 
                 TextColumn::make('subject_title')
-                ->label('Document'),
+                ->label('Document')
+                ->wrap(),
 
                 TextColumn::make('created_at')
                     ->label('Date and time')
@@ -49,6 +43,14 @@ class RecentActivities extends BaseWidget
                         }
 
                     }),
+                    
+                TextColumn::make('event')
+                    ->label('Activity')
+                    ->color(fn($state) => $state == 'deleted' ? 'danger' : 
+                    ($state == 'created' ? 'success' :  
+                    ($state == 'updated' ? 'info' : 
+                    ($state == 'restored' ? 'warning' : ' '))))
+                    ->formatStateUsing(fn ($state) => ucwords($state)),
             ])
             ->paginated(false); 
     }
