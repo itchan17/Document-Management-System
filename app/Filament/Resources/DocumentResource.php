@@ -276,6 +276,7 @@ class DocumentResource extends Resource
                     Select::make('folder')
                         ->label('Select Folder')  
                         ->options(Folder::all()->pluck('folder_name', 'id'))
+                        ->hiddenOn('create')
                         ->suffixIcon('heroicon-s-folder'),
                     TextArea::make('description')
                         ->label('Description')
@@ -347,8 +348,6 @@ class DocumentResource extends Resource
                             ->send();
                     }
                 }),
-                
-
                 Tables\Actions\EditAction::make()
                     ->color('gray'),               
                 Tables\Actions\DeleteAction::make()

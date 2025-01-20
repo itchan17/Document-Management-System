@@ -1,5 +1,4 @@
-<x-filament-panels::page>
-    <x-filament::section>
+<x-filament-panels::page> 
         <x-filament-panels::form wire:submit="create">
             {{ $this->form }}
             <div class="left flex flex-wrap items-center gap-3">
@@ -7,5 +6,4 @@
                 {{ $this->clearAction }}                  
             </div>
         </x-filament-panels::form>
-    </x-filament::section>
 </x-filament-panels::page>

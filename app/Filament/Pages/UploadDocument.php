@@ -36,7 +36,7 @@ use Exception;
 use Illuminate\Database\QueryException;
 use Filament\Actions\Contracts\HasActions;
 
-class CreateDocument extends Page implements HasForms, HasActions
+class UploadDocument extends Page implements HasForms, HasActions
 {
     use InteractsWithForms;
 
