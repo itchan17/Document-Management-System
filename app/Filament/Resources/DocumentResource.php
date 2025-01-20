@@ -47,6 +47,11 @@ use Illuminate\Database\Eloquent\Model;
 use Exception;
 use App\Models\DocumentViewLog;
 use Illuminate\Support\Facades\DB;
+use Filament\Support\Enums\MaxWidth;
+use Illuminate\Support\HtmlString;
+use Filament\Support\Enums\Alignment;
+ 
+
 
 class DocumentResource extends Resource
 {
@@ -316,38 +321,57 @@ class DocumentResource extends Resource
             ->searchable()
             ->defaultSort('created_at', 'desc')
             ->actions([
-                Action::make('viewFile') // view function
+                 Action::make('viewFile') // view function
                 ->label('View')
                 ->color('gray')
                 ->icon('heroicon-s-eye')
-                ->url(fn (Document $record): string => '')
-                ->before(function (Document $record) {
-                    // Log the document view action 
+                ->modalIconColor('danger')
+                ->modalIcon('heroicon-s-eye')
+                ->modalHeading(function (Document $document){                 
+                    return $document->title;
+                })
+                ->modalContent(function (Document $document): HtmlString {
+                    
                     if (auth()->check()) {
                         DocumentViewLog::create([
-                            'document_id' => $record->id,
+                            'document_id' => $document->id,
                             'user_id' => auth()->id(),
                             'viewed_at' => now(),
                         ]);
                     }
-                })
-                ->requiresConfirmation()
-                ->modalIcon('heroicon-s-eye')
-                ->modalHeading('Confirm')
-                ->modalDescription('This document contains confidential information. Are you sure you want to view this document?')
-                ->modalSubmitActionLabel('View')
-                ->action(function (Document $record) {
-                    
-                    if (Storage::disk('local')->exists($record->file_path)) {
-                        return redirect()->route('documents.view', $record->id);
-                    } else {
-                        // Handle the case where the file does not exist
-                        Notification::make()
-                            ->title('File not found')
-                            ->danger()
-                            ->send();
+                    if (Storage::disk('local')->exists($document->file_path)) {
+                        return new HtmlString(
+                            '<iframe src="' . route('documents.view', [$document->id]) . '" width="100%" height="600px"></iframe>'
+                        );
+                    }else{
+                        return new HtmlString(
+                            '<center><p>File not found.</p><center>'
+                        );
                     }
-                }),
+                })
+                ->modalWidth(MaxWidth::FiveExtraLarge)
+                ->modalCancelAction(fn (StaticAction $action) => $action->label('Close')) 
+                ->modalFooterActionsAlignment(Alignment::Center)
+                ->modalSubmitAction(false)
+                ->extraModalFooterActions([
+                    Action::make('ViewMore')
+                        ->label('View In New Tab')
+                        ->color('primary')
+                        ->url(function (Document $document) {
+                            return route('documents.view', [$document->id]);
+                        })
+                        ->openUrlInNewTab()
+                        ->disabled(function (Document $document) {
+                            return !Storage::disk('local')->exists($document->file_path);
+                        }),
+                ]),
+
+
+
+
+
+
+                
                 Tables\Actions\EditAction::make()
                     ->color('gray'),               
                 Tables\Actions\DeleteAction::make()
