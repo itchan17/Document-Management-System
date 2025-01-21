@@ -41,6 +41,7 @@ class CreateUser extends CreateRecord
     }
 
 
-    
+    protected static bool $canCreateAnother = false;
+
     
 }
