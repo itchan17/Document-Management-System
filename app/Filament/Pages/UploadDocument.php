@@ -35,6 +35,7 @@ use Illuminate\Support\Facades\Storage;
 use Exception;
 use Illuminate\Database\QueryException;
 use Filament\Actions\Contracts\HasActions;
+set_time_limit(3600); //Set execution time to 1hr
 
 class UploadDocument extends Page implements HasForms, HasActions
 {
@@ -259,9 +260,9 @@ class UploadDocument extends Page implements HasForms, HasActions
                             ]),
                     DatePicker::make('file_date')
                         ->required()
-                        ->label('File Date'),
+                        ->label('File date'),
                     Select::make('folder_id')
-                        ->label('Select Folder')  
+                        ->label('Select folder')  
                         ->options(Folder::all()->pluck('folder_name', 'id'))
                         ->suffixIcon('heroicon-s-folder'),
                     TextArea::make('description')
@@ -277,11 +278,10 @@ class UploadDocument extends Page implements HasForms, HasActions
     public function createAction(): Action
     {
         return Action::make('create')
-            
             ->label('Upload')
             ->requiresConfirmation()
             ->modalIcon('heroicon-o-information-circle')
-            ->modalHeading('Upload Document')
+            ->modalHeading('Upload document')
             ->modalDescription('Are you sure you want to upload this document?')
             ->modalSubmitActionLabel('Confirm')
             ->modalCancelActionLabel('Cancel')
@@ -361,7 +361,7 @@ class UploadDocument extends Page implements HasForms, HasActions
 
                 Notification::make()
                 ->success()
-                ->title('Document saved')
+                ->title('Document uploaded')
                 ->send();
 
                 $this->form->fill();

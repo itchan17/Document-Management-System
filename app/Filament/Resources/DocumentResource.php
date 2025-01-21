@@ -6,6 +6,7 @@ use App\Filament\Resources\DocumentResource\Pages;
 use App\Filament\Resources\DocumentResource\RelationManagers;
 use App\Filament\Resources\DocumentResource\Pages\ListDocumentActivities;
 use App\Models\Document;
+use App\Models\User;
 use App\Models\Folder;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -47,6 +48,9 @@ use Illuminate\Database\Eloquent\Model;
 use Exception;
 use App\Models\DocumentViewLog;
 use Illuminate\Support\Facades\DB;
+use Filament\Tables\Filters\Filter;
+use Carbon\Carbon;
+set_time_limit(3600);  //Set execution time to 1hr
 
 class DocumentResource extends Resource
 {
@@ -272,9 +276,9 @@ class DocumentResource extends Resource
                             ->rules(['regex:/^[a-zA-Z0-9\s_-]*$/']),
                     DatePicker::make('file_date')
                         ->required()
-                        ->label('File Date'),
+                        ->label('File date'),
                     Select::make('folder')
-                        ->label('Select Folder')  
+                        ->label('Select folder')  
                         ->options(Folder::all()->pluck('folder_name', 'id'))
                         ->hiddenOn('create')
                         ->suffixIcon('heroicon-s-folder'),
@@ -315,6 +319,67 @@ class DocumentResource extends Resource
             ])
             ->searchable()
             ->defaultSort('created_at', 'desc')
+            ->filters([
+                Filter::make('created_at')
+                    ->form([
+                        DatePicker::make('created_at')
+                            ->label('Uploaded at')  ,
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['created_at']) {
+                            return null;
+                        }
+                 
+                        return 'Uploaded at ' . Carbon::parse($data['created_at'])->toFormattedDateString();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_at'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '=', $date),
+                            );
+                    }),
+                Filter::make('user_id')
+                    ->form([
+                        Select::make('user_id')  // Ensure the field matches the filter name
+                            ->label('Uploaded by')  
+                            ->options(User::all()->mapWithKeys(function ($user) {
+                                return [$user->id => $user->name . ' ' . $user->lastname];
+                            })->toArray()), 
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['user_id']) {
+                            return null;
+                        }
+                        $user = User::find($data['user_id']);
+                        return 'Uploaded by ' . $user->name . ' ' . $user->lastname;
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            !empty($data['user_id']),  // Check if the value is not empty to avoid errors
+                            fn (Builder $query) => $query->where('user_id', '=', $data['user_id'])
+                        );
+                    }),
+                Filter::make('file_date')
+                    ->form([
+                        DatePicker::make('file_date')
+                            ->label('File date')  ,
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['file_date']) {
+                            return null;
+                        }
+                 
+                        return 'File date ' . Carbon::parse($data['file_date'])->toFormattedDateString();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['file_date'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('file_date', '=', $date),
+                            );
+                    }),                                     
+            ])
             ->actions([
                 Action::make('viewFile') // view function
                 ->label('View')

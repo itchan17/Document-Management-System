@@ -100,7 +100,7 @@ class EditDocument extends EditRecord
             ->label('Save')
             ->requiresConfirmation()
             ->modalIcon('heroicon-o-information-circle')
-            ->modalHeading('Upload Document')
+            ->modalHeading('Save changes')
             ->modalDescription('Are you sure you want to save changes?')
             ->action(function () {
                 $this->closeActionModal();

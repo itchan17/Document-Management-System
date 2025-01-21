@@ -14,6 +14,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\Layout\View;
 use App\Models\Document; 
+use App\Models\User; 
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
@@ -42,6 +43,7 @@ use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\CreateAction;
 use App\Filament\Resources\DocumentResource;
+use Filament\Tables\Filters\Filter;
 
 class GetDocumentsRelationManager extends RelationManager
 {
@@ -50,6 +52,7 @@ class GetDocumentsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->recordUrl(null) 
             ->recordTitleAttribute('title')
             ->defaultSort('created_at', 'desc')
             ->columns([
@@ -73,7 +76,65 @@ class GetDocumentsRelationManager extends RelationManager
             ])
             ->searchable()
             ->filters([
-                //
+                Filter::make('created_at')
+                    ->form([
+                        DatePicker::make('created_at')
+                            ->label('Uploaded at')  ,
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['created_at']) {
+                            return null;
+                        }
+                 
+                        return 'Uploaded at ' . Carbon::parse($data['created_at'])->toFormattedDateString();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_at'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '=', $date),
+                            );
+                    }),
+                Filter::make('user_id')
+                    ->form([
+                        Select::make('user_id')  // Ensure the field matches the filter name
+                            ->label('Uploaded by')  
+                            ->options(User::all()->mapWithKeys(function ($user) {
+                                return [$user->id => $user->name . ' ' . $user->lastname];
+                            })->toArray()), 
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['user_id']) {
+                            return null;
+                        }
+                        $user = User::find($data['user_id']);
+                        return 'Uploaded by ' . $user->name . ' ' . $user->lastname;
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            !empty($data['user_id']),  // Check if the value is not empty to avoid errors
+                            fn (Builder $query) => $query->where('user_id', '=', $data['user_id'])
+                        );
+                    }),
+                Filter::make('file_date')
+                    ->form([
+                        DatePicker::make('file_date')
+                            ->label('File date')  ,
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['file_date']) {
+                            return null;
+                        }
+                 
+                        return 'File date ' . Carbon::parse($data['file_date'])->toFormattedDateString();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['file_date'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('file_date', '=', $date),
+                            );
+                    }),                                     
             ])
             ->headerActions([
                 CreateAction::make()

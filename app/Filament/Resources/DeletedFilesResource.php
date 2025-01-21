@@ -29,9 +29,9 @@ class DeletedFilesResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
-    protected static ?string $navigationLabel = 'Deleted Items';
+    protected static ?string $navigationLabel = 'Recycle Bin';
 
-    protected static ?string $pluralLabel = 'Deleted Items';
+    protected static ?string $pluralLabel = 'Recycle Bin';
 
     protected static ?string $navigationGroup = 'Trash';
 

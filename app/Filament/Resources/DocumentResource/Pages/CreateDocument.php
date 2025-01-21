@@ -135,13 +135,18 @@ class CreateDocument extends CreateRecord
         }
     }
 
+    protected function getCreatedNotificationTitle(): ?string
+    {
+        return 'Document uploaded';
+    }
+
     protected function getCreateFormAction(): Action
     {
         return Action::make('upload')
             ->label('Upload')
             ->requiresConfirmation()
             ->modalIcon('heroicon-o-information-circle')
-            ->modalHeading('Upload Document')
+            ->modalHeading('Upload document')
             ->modalDescription('Are you sure you want to upload this document?')
             ->action(function () {
                 $this->closeActionModal();
