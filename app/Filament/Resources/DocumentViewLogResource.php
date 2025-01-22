@@ -48,6 +48,8 @@ class DocumentViewLogResource extends Resource
     {
         return $table
         ->recordUrl(null) 
+        ->paginated(false)
+        ->searchable(false)
             ->columns([
 
                 TextColumn::make('user.name')
