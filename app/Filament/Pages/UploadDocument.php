@@ -34,8 +34,10 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Storage;
 use Exception;
 use Illuminate\Database\QueryException;
+use Filament\Actions\Contracts\HasActions;
+set_time_limit(3600); //Set execution time to 1hr
 
-class CreateDocument extends Page implements HasForms
+class UploadDocument extends Page implements HasForms, HasActions
 {
     use InteractsWithForms;
 
@@ -60,7 +62,7 @@ class CreateDocument extends Page implements HasForms
     {
         return $form
             ->schema([
-                Section::make('Upload FIle')
+                Section::make('Upload File')
                 ->columns([
                     'sm' => 1,
                     'md' => 3,                 
@@ -258,9 +260,9 @@ class CreateDocument extends Page implements HasForms
                             ]),
                     DatePicker::make('file_date')
                         ->required()
-                        ->label('File Date'),
+                        ->label('File date'),
                     Select::make('folder_id')
-                        ->label('Select Folder')  
+                        ->label('Select folder')  
                         ->options(Folder::all()->pluck('folder_name', 'id'))
                         ->suffixIcon('heroicon-s-folder'),
                     TextArea::make('description')
@@ -273,11 +275,43 @@ class CreateDocument extends Page implements HasForms
             ])->statePath('data');
     }
 
+    public function createAction(): Action
+    {
+        return Action::make('create')
+            ->label('Upload')
+            ->requiresConfirmation()
+            ->modalIcon('heroicon-o-information-circle')
+            ->modalHeading('Upload document')
+            ->modalDescription('Are you sure you want to upload this document?')
+            ->modalSubmitActionLabel('Confirm')
+            ->modalCancelActionLabel('Cancel')
+            ->action(function () {
+                $this->closeActionModal();
+                $this->create();
+            });     
+    }
+
+    public function clearAction(): Action
+    {
+        return Action::make('clear')
+            
+            ->label('Clear') 
+            ->color('gray')
+            ->requiresConfirmation()
+            ->modalHeading('Clear Form')
+            ->modalDescription('Are you sure you want to clear this form?')
+            ->modalSubmitActionLabel('Confirm')
+            ->modalCancelActionLabel('Cancel')
+            ->action(function () {
+                $this->closeActionModal();
+                $this->clear();
+            });     
+    }
+   
     public function create()
     {
             $data = $this->form->getState();
            
-
             // extract the file
             $data['file_content'] = ($this->extractContent($data));
             
@@ -327,7 +361,7 @@ class CreateDocument extends Page implements HasForms
 
                 Notification::make()
                 ->success()
-                ->title('Document saved')
+                ->title('Document uploaded')
                 ->send();
 
                 $this->form->fill();
@@ -467,7 +501,6 @@ class CreateDocument extends Page implements HasForms
         ];
     }
 
-
     // Function for the clear button
     public function clear(): void
     {
@@ -475,7 +508,7 @@ class CreateDocument extends Page implements HasForms
 
         Notification::make()
         ->success()
-        ->title('Form Cleared!')
+        ->title('Form cleared!')
         ->send();
     }
 }

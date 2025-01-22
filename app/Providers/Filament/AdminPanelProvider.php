@@ -18,6 +18,11 @@ use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Yebor974\Filament\RenewPassword\RenewPasswordPlugin;
+use App\Filament\Pages\UploadDocument;
+use Filament\Navigation\MenuItem;
+use Filament\Actions\Action;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\Facades\Blade;
 
 
 class AdminPanelProvider extends PanelProvider
@@ -31,7 +36,11 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->colors([
                'primary' => '#A60606',
-            ])    
+            ])  
+            ->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+                fn (): string => Blade::render('data-privacy'),
+            )            
             ->darkMode(false)     
             ->viteTheme('resources/css/filament/admin/theme.css')
             ->favicon(asset('images/engineering_logo.svg'))

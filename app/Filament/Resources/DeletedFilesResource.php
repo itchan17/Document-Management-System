@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Filament\Infolists\Components\Section;
 use Filament\Notifications\Notification;
 use Filament\Notifications\Events\DatabaseNotificationsSent;
+use Carbon\Carbon;
 
 class DeletedFilesResource extends Resource
 {
@@ -28,9 +29,9 @@ class DeletedFilesResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
-    protected static ?string $navigationLabel = 'Deleted Items';
+    protected static ?string $navigationLabel = 'Recycle Bin';
 
-    protected static ?string $pluralLabel = 'Deleted Items';
+    protected static ?string $pluralLabel = 'Recycle Bin';
 
     protected static ?string $navigationGroup = 'Trash';
 
@@ -55,6 +56,8 @@ class DeletedFilesResource extends Resource
             ->recordUrl(null) 
             ->columns([
                 TextColumn::make('title')
+                    ->words(10)
+                    ->wrap()
                     ->icon('heroicon-s-document')
                     ->searchable(),
 
@@ -63,11 +66,18 @@ class DeletedFilesResource extends Resource
                     ->searchable()
                     ->default('Deleted User'),
 
-
                 TextColumn::make('deleted_at')
                     ->sortable()
-                    ->label('Deleted at')
-                    ->dateTime('F j, Y, g:i a'),
+                    ->label('Expires In')
+                    ->formatStateUsing(function ($state) {
+                        // Calculate the number of days left
+                        $deletionDate = \Carbon\Carbon::parse($state)->addDays(30);
+                        $now = \Carbon\Carbon::now();
+                        $daysLeft = abs(round($deletionDate->diffInDays($now)));
+
+                        return "{$daysLeft} " . ($daysLeft != 1 ? 'days' : 'day');
+
+                    }),
             ])
 
             ->actions([

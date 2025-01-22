@@ -53,6 +53,12 @@ class Document extends Model
     {
         return $this->belongsTo(User::class, 'deleted_by');
     }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+    
     
     
     

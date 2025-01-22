@@ -6,6 +6,7 @@ use App\Filament\Resources\DocumentResource\Pages;
 use App\Filament\Resources\DocumentResource\RelationManagers;
 use App\Filament\Resources\DocumentResource\Pages\ListDocumentActivities;
 use App\Models\Document;
+use App\Models\User;
 use App\Models\Folder;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -47,6 +48,13 @@ use Illuminate\Database\Eloquent\Model;
 use Exception;
 use App\Models\DocumentViewLog;
 use Illuminate\Support\Facades\DB;
+use Filament\Tables\Filters\Filter;
+use Carbon\Carbon;
+use Filament\Support\Enums\MaxWidth;
+use Illuminate\Support\HtmlString;
+use Filament\Support\Enums\Alignment;
+ 
+set_time_limit(3600);  //Set execution time to 1hr
 
 class DocumentResource extends Resource
 {
@@ -68,7 +76,7 @@ class DocumentResource extends Resource
     {
         return $form
             ->schema([
-                Section::make('Upload FIle')
+                Section::make('Upload File')
                 ->columns([
                     'sm' => 1,
                     'md' => 3,                 
@@ -272,10 +280,11 @@ class DocumentResource extends Resource
                             ->rules(['regex:/^[a-zA-Z0-9\s_-]*$/']),
                     DatePicker::make('file_date')
                         ->required()
-                        ->label('File Date'),
+                        ->label('File date'),
                     Select::make('folder')
-                        ->label('Select Folder')  
+                        ->label('Select folder')  
                         ->options(Folder::all()->pluck('folder_name', 'id'))
+                        ->hiddenOn('create')
                         ->suffixIcon('heroicon-s-folder'),
                     TextArea::make('description')
                         ->label('Description')
@@ -297,13 +306,16 @@ class DocumentResource extends Resource
                 Stack::make([                  
                     TextColumn::make('title')
                         ->weight(FontWeight::Medium)
-                        ->size(TextColumn\TextColumnSize::Medium),       
+                        ->size(TextColumn\TextColumnSize::Medium),    
+                    TextColumn::make('created_at')
+                        ->size(TextColumn\TextColumnSize::Small)
+                        ->dateTime('F j, Y, g:i a'),   
                     TextColumn::make('file_name')
                         ->icon('heroicon-s-document')
                         ->iconColor('primary'),
                 ]),
                 View::make('documents.table.collapsible-row-content')
-                    ->collapsible(),     
+                    ->collapsible(),   
             ])
             ->contentGrid([
                 'md' => 1,
@@ -311,41 +323,119 @@ class DocumentResource extends Resource
             ])
             ->searchable()
             ->defaultSort('created_at', 'desc')
+            ->filters([
+                Filter::make('created_at')
+                    ->form([
+                        DatePicker::make('created_at')
+                            ->label('Uploaded at')  ,
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['created_at']) {
+                            return null;
+                        }
+                 
+                        return 'Uploaded at ' . Carbon::parse($data['created_at'])->toFormattedDateString();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_at'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '=', $date),
+                            );
+                    }),
+                Filter::make('user_id')
+                    ->form([
+                        Select::make('user_id')  // Ensure the field matches the filter name
+                            ->label('Uploaded by')  
+                            ->options(User::all()->mapWithKeys(function ($user) {
+                                return [$user->id => $user->name . ' ' . $user->lastname];
+                            })->toArray()), 
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['user_id']) {
+                            return null;
+                        }
+                        $user = User::find($data['user_id']);
+                        return 'Uploaded by ' . $user->name . ' ' . $user->lastname;
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query->when(
+                            !empty($data['user_id']),  // Check if the value is not empty to avoid errors
+                            fn (Builder $query) => $query->where('user_id', '=', $data['user_id'])
+                        );
+                    }),
+                Filter::make('file_date')
+                    ->form([
+                        DatePicker::make('file_date')
+                            ->label('File date')  ,
+                    ])
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!$data['file_date']) {
+                            return null;
+                        }
+                 
+                        return 'File date ' . Carbon::parse($data['file_date'])->toFormattedDateString();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['file_date'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('file_date', '=', $date),
+                            );
+                    }),                                     
+            ])
             ->actions([
-                Action::make('viewFile') // view function
+                 Action::make('viewFile') // view function
                 ->label('View')
                 ->color('gray')
                 ->icon('heroicon-s-eye')
-                ->url(fn (Document $record): string => '')
-                ->before(function (Document $record) {
-                    // Log the document view action 
+                ->modalIconColor('danger')
+                ->modalIcon('heroicon-s-eye')
+                ->modalHeading(function (Document $document){                 
+                    return $document->title;
+                })
+                ->modalContent(function (Document $document): HtmlString {
+                    
                     if (auth()->check()) {
                         DocumentViewLog::create([
-                            'document_id' => $record->id,
+                            'document_id' => $document->id,
                             'user_id' => auth()->id(),
                             'viewed_at' => now(),
                         ]);
                     }
-                })
-                ->requiresConfirmation()
-                ->modalIcon('heroicon-s-eye')
-                ->modalHeading('Confirm')
-                ->modalDescription('This document contains confidential information. Are you sure you want to view this document?')
-                ->modalSubmitActionLabel('View')
-                ->action(function (Document $record) {
-                    
-                    if (Storage::disk('local')->exists($record->file_path)) {
-                        return redirect()->route('documents.view', $record->id);
-                    } else {
-                        // Handle the case where the file does not exist
-                        Notification::make()
-                            ->title('File not found')
-                            ->danger()
-                            ->send();
+                    if (Storage::disk('local')->exists($document->file_path)) {
+                        return new HtmlString(
+                            '<iframe src="' . route('documents.view', [$document->id]) . '" width="100%" height="600px"></iframe>'
+                        );
+                    }else{
+                        return new HtmlString(
+                            '<center><p>File not found.</p><center>'
+                        );
                     }
-                }),
-                
+                })
+                ->modalWidth(MaxWidth::FiveExtraLarge)
+                ->modalCancelAction(fn (StaticAction $action) => $action->label('Close')) 
+                ->modalFooterActionsAlignment(Alignment::Center)
+                ->modalSubmitAction(false)
+                ->extraModalFooterActions([
+                    Action::make('ViewMore')
+                        ->label('View In New Tab')
+                        ->color('primary')
+                        ->url(function (Document $document) {
+                            return route('documents.view', [$document->id]);
+                        })
+                        ->openUrlInNewTab()
+                        ->disabled(function (Document $document) {
+                            return !Storage::disk('local')->exists($document->file_path);
+                        }),
+                ]),
 
+
+
+
+
+
+                
                 Tables\Actions\EditAction::make()
                     ->color('gray'),               
                 Tables\Actions\DeleteAction::make()

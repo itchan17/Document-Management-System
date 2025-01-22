@@ -62,6 +62,7 @@ class UserResource extends Resource
                         ->required(),
 
             ])
+            
         ]);
     }
 
@@ -100,6 +101,7 @@ class UserResource extends Resource
             ]);
     }
 
+    
     
 
     public static function getRelations(): array

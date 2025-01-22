@@ -26,9 +26,11 @@ class RecentlyAdded extends BaseWidget
             )
             ->columns([
                 TextColumn::make('subject_title')
-                    ->label('Title'),
+                    ->label('Title')
+                    ->wrap(),
                 TextColumn::make('subject_file_name')
-                    ->label('File name'),
+                    ->label('File name')
+                    ->wrap(),
             ])
             ->paginated(false); 
     }

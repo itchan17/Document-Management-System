@@ -9,24 +9,25 @@ use Smalot\PdfParser\Parser;
 use thiagoalessio\TesseractOCR\TesseractOCR;
 use App\Models\Folder;
 use Carbon\Carbon;
-use App\Filament\Pages\CreateDocument;
+use App\Filament\Pages\UploadDocument;
 use Illuminate\Support\Facades\Storage;
 use Exception;
 use Filament\Notifications\Notification;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\QueryException;
+use Filament\Actions\Action;
 
 class EditDocument extends EditRecord
 {
     protected static string $resource = DocumentResource::class;
-    
+
     // Convert pdf to text if ever file has been changed
     protected function mutateFormDataBeforeSave(array $data): array
     {    
         
         //Instantiate CreateDocument
-        $createDocument = new CreateDocument();
+        $createDocument = new UploadDocument();
 
         // extract the file
         $data['file_content'] = ($createDocument->extractContent($data));
@@ -93,9 +94,17 @@ class EditDocument extends EditRecord
         }
     }
 
-
-    // protected function getRedirectUrl(): string
-    // {
-    //     return $this->getResource()::getUrl('index');
-    // }
+    protected function getSaveFormAction(): Action
+    {
+        return Action::make('customSave')
+            ->label('Save')
+            ->requiresConfirmation()
+            ->modalIcon('heroicon-o-information-circle')
+            ->modalHeading('Save changes')
+            ->modalDescription('Are you sure you want to save changes?')
+            ->action(function () {
+                $this->closeActionModal();
+                $this->save();
+            });
+    }
 }
